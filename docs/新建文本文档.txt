@@ -1,0 +1,465 @@
+一、核心设计问题
+1.1 库存计算逻辑存在严重缺陷
+问题描述：
+方案中说"套餐可售数量 = min(各底层 item 当日 availableStock / item.quantity)"，但酒店房型的库存是按每晚扣减的，跨越多天时计算逻辑错误。
+
+举例：
+
+text
+套餐：豪华大床房2晚 + 景区门票2张
+- 5月1日：房型库存=1，门票库存=100
+- 5月2日：房型库存=10，门票库存=100
+
+按方案公式：
+  房型可用 = min(1, 10) = 1  ← 错误！应该看连续日期
+  实际计算结果是1份，但5月2日的库存是够的
+修复方案：
+
+javascript
+// 酒店套餐：需要检查连续日期的库存最小值
+async function getHotelPackageStock(roomTypeId, checkIn, checkOut, quantity) {
+  const dates = generateDateRange(checkIn, checkOut);
+  let minStock = Infinity;
+  
+  for (const date of dates) {
+    const stock = await RoomDatePrice.findOne({
+      where: { roomPackageId: roomTypeId, date }
+    });
+    // 每晚都需要足够库存
+    minStock = Math.min(minStock, stock.availableStock);
+  }
+  // 返回按需要数量折算后的可售份数
+  return Math.floor(minStock / quantity);
+}
+
+// 最终套餐可售数量 = min(房型可售, 各门票可售)
+1.2 主产品定义与业务规则矛盾
+问题描述：
+方案说"每个套餐有且仅有1个主产品，日期和库存由主产品驱动"，但酒店套餐主产品是房型，门票套餐主产品是门票。
+
+矛盾点：
+
+酒店套餐：用户选入住/离店日期，门票游玩日期=入住日期 ✅ 成立
+
+门票套餐：用户选游玩日期，主产品是门票 ✅ 成立
+
+但如果酒店套餐里包含2个不同使用日期的门票呢？比如入住当天用的门票 + 离店当天用的门票？
+
+场景举例：
+
+text
+"周末放松套餐"：周五入住+周六离店，包含：
+  - 周五晚上温泉门票（使用日期=入住当天）
+  - 周六上午景区门票（使用日期=退房当天，即入住日期+1）
+此时"门票游玩日期=入住日期"就不成立了。
+
+修复方案：
+
+sql
+-- package_items 表新增字段
+ALTER TABLE package_items ADD COLUMN `useDateOffset` INT DEFAULT 0 COMMENT '日期偏移天数，如门票在入住后N天使用';
+javascript
+// 计算使用日期
+function getUseDate(item, checkIn, checkOut, playDate) {
+  if (item.bizType === 'hotel') {
+    return { startDate: checkIn, endDate: checkOut };
+  }
+  
+  switch(item.useDateType) {
+    case 1: // 跟随入住日期
+      return { startDate: addDays(checkIn, item.useDateOffset || 0), endDate: null };
+    case 2: // 跟随游玩日期
+      return { startDate: playDate, endDate: null };
+    case 3: // 固定日期
+      return { startDate: item.useDateValue, endDate: null };
+    case 4: // 购买后N天内有效
+      return { startDate: null, endDate: addDays(new Date(), item.useDateValue) };
+    default:
+      return { startDate: checkIn, endDate: null };
+  }
+}
+1.3 订单表复用方案的问题
+问题一：verifyStatus 语义冲突
+现有 orders 表的 verifyStatus 原意是"核销状态"，但套餐订单有"部分核销"状态，现有字段值不够用。
+
+| 现有 | 1未核销 | 3已核销 | 缺2？ |
+| 套餐场景 | 未核销 | 部分核销 | 已核销 |
+
+问题二：字段类型不匹配
+
+sql
+-- 现有 orders 表字段类型
+buyNum VARCHAR(11)  -- 字符串存储数字
+ticketPrice VARCHAR(11)  -- 价格存字符串
+
+-- 套餐订单需要数值计算
+-- 会导致每次都要转换类型，容易出错
+问题三：超卖风险
+下单时扣库存，但订单创建后15分钟未支付才释放库存。高并发下，同一个库存可能被多个"待支付"订单占用。
+
+建议：采用方案B（独立表）或优化方案A
+
+优化后的方案A（在方案A基础上修改）：
+
+sql
+-- 方案A优化：新增套餐订单扩展表，不污染 orders 表
+CREATE TABLE `order_package_ext` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `orderNumber` VARCHAR(32) NOT NULL COMMENT '关联订单号',
+  `packageId` INT NOT NULL,
+  `checkInDate` DATE COMMENT '入住日期',
+  `checkOutDate` DATE COMMENT '离店日期',
+  `verifyStatus` TINYINT DEFAULT 1 COMMENT '1=未核销 2=部分核销 3=已核销',
+  `expireTime` DATETIME NOT NULL COMMENT '订单过期时间',
+  INDEX `idx_order` (`orderNumber`),
+  INDEX `idx_expire` (`expireTime`)
+);
+
+-- 这样 orders 表只需要新增 orderType 字段区分即可
+-- 其他字段保持原样，避免类型转换问题
+1.4 价格与库存的脱节问题
+问题描述：
+package_date_prices 存套餐价格，package_price_rules 存价格规则。但套餐价格与底层 items 价格之和没有关联校验。
+
+风险：
+
+text
+套餐成本（底层items价格之和）= 房型699 + 门票120*2 = 939元
+套餐售价设置 = 399元  ← 卖一套亏一套
+修复方案：
+
+sql
+-- product_packages 表新增字段
+ALTER TABLE product_packages ADD COLUMN `costPrice` DECIMAL(10,2) DEFAULT 0.00 COMMENT '成本价（自动计算）';
+ALTER TABLE product_packages ADD COLUMN `profitMargin` DECIMAL(5,2) DEFAULT NULL COMMENT '毛利率（提醒用）';
+javascript
+// 创建/编辑套餐时自动校验
+async function validatePackagePrice(packageId, items, salePrice) {
+  // 计算各item原价之和
+  let totalCost = 0;
+  for (const item of items) {
+    // 取 item.unitPrice 或查询底层业务表的最新价格
+    totalCost += item.unitPrice * item.quantity;
+  }
+  
+  if (salePrice < totalCost * 0.5) {
+    console.warn(`警告：套餐${packageId}售价${salePrice}低于成本价50%`);
+  }
+  
+  // 更新成本价
+  await ProductPackage.update(
+    { costPrice: totalCost },
+    { where: { id: packageId } }
+  );
+}
+二、数据一致性问题
+2.1 事务范围过大
+问题：
+下单时，事务内同时包含：
+
+校验限购
+
+扣减酒店库存（可能多天）
+
+扣减门票库存
+
+创建订单
+
+创建订单明细
+
+如果套餐包含多个酒店房型或多个门票，事务时间会很长，容易死锁。
+
+优化方案：
+
+javascript
+// 方案：两阶段提交
+// Phase 1: 预占库存（短事务）
+async function preOccupyStock(package, items, params) {
+  const occupationKey = `occupation:${packageId}:${userId}`;
+  
+  // 1. 快速校验并预占（超时30秒自动释放）
+  await sequelize.transaction(async (t) => {
+    // 扣减底层库存，同时记录预占记录
+    await deductStockWithOccupation();
+    // 创建预占记录
+    await StockOccupation.create({
+      occupationKey,
+      expireTime: Date.now() + 30000,
+      data: { packageId, items, params }
+    });
+  });
+  
+  return occupationKey;
+}
+
+// Phase 2: 确认订单（支付成功后）
+async function confirmOrder(occupationKey) {
+  // 将预占转为正式占用，无需再扣库存
+}
+2.2 核销后的库存同步问题
+问题：
+套餐核销后，package_order_details 的核销状态更新了，但底层业务表（如酒店入住状态）没有同步更新。
+
+场景：
+用户核销了酒店住宿，但酒店系统不知道这个订单已经确认入住。
+
+修复方案：
+
+javascript
+// 核销时同步调用业务系统接口
+async function verifyDetail(verifyCode) {
+  await sequelize.transaction(async (t) => {
+    const detail = await PackageOrderDetail.findOne({
+      where: { verifyCode },
+      lock: t.LOCK.UPDATE
+    });
+    
+    await detail.update({ verifyStatus: 2, verifyTime: new Date() }, { transaction: t });
+    
+    // 调用业务系统核销接口
+    if (detail.bizType === 'hotel') {
+      await hotelService.checkin({
+        orderNumber: detail.orderNumber,
+        roomTypeId: detail.bizId,
+        useDate: detail.useDate
+      });
+    } else if (detail.bizType === 'ticket') {
+      await ticketService.useTicket({
+        orderNumber: detail.orderNumber,
+        ticketId: detail.bizId,
+        verifyCode: detail.verifyCode
+      });
+    }
+  });
+}
+2.3 订单取消时库存释放的并发问题
+问题：
+订单超时未支付，定时任务释放库存。如果用户在超时临界点恰好支付，会出现支付成功但订单已被取消的情况。
+
+修复方案：
+
+sql
+-- orders 表新增版本号字段，用于乐观锁
+ALTER TABLE orders ADD COLUMN `version` INT DEFAULT 0;
+javascript
+// 支付回调时检查版本
+async function payCallback(orderNumber) {
+  const result = await sequelize.transaction(async (t) => {
+    const order = await Order.findOne({
+      where: { orderNumber, orderStatus: 1 }, // 只有待支付才能支付
+      lock: t.LOCK.UPDATE
+    });
+    
+    if (!order) {
+      throw new Error('订单不存在或已取消');
+    }
+    
+    // 检查是否过期
+    if (order.expireTime < new Date()) {
+      throw new Error('订单已过期');
+    }
+    
+    // 更新订单状态（同时更新版本号）
+    const affected = await Order.update(
+      { orderStatus: 2, version: order.version + 1 },
+      { where: { orderNumber, version: order.version }, transaction: t }
+    );
+    
+    if (affected[0] === 0) {
+      throw new Error('订单状态已变更，请重试');
+    }
+  });
+}
+三、性能与扩展性问题
+3.1 套餐列表查询性能
+问题：
+套餐列表需要展示价格区间，每个套餐都要查 package_date_prices 获取 min/max price。
+
+优化方案：
+
+sql
+-- product_packages 表冗余价格区间字段
+ALTER TABLE product_packages ADD COLUMN `minPrice` DECIMAL(10,2) DEFAULT 0.00 COMMENT '最低价（冗余）';
+ALTER TABLE product_packages ADD COLUMN `maxPrice` DECIMAL(10,2) DEFAULT 0.00 COMMENT '最高价（冗余）';
+
+-- 价格规则生成时更新
+CREATE TRIGGER after_package_date_price_insert
+AFTER INSERT ON package_date_prices
+FOR EACH ROW
+BEGIN
+  UPDATE product_packages 
+  SET 
+    minPrice = (SELECT MIN(price) FROM package_date_prices WHERE packageId = NEW.packageId),
+    maxPrice = (SELECT MAX(price) FROM package_date_prices WHERE packageId = NEW.packageId)
+  WHERE id = NEW.packageId;
+END;
+3.2 可扩展性：bizType 硬编码问题
+问题：
+当前只支持 hotel/ticket，未来扩展 spa/dining 需要改多处代码。
+
+优化方案：
+
+javascript
+// 策略模式 + 插件化
+const BizTypeHandlers = {
+  hotel: {
+    checkStock: async (bizId, params) => { /* 调用酒店服务 */ },
+    deductStock: async (bizId, params, transaction) => { /* 调用酒店服务 */ },
+    releaseStock: async (bizId, params, transaction) => { /* 调用酒店服务 */ },
+    createOrder: async (bizId, params, transaction) => { /* 创建酒店订单 */ },
+    verify: async (bizId, params, transaction) => { /* 核销 */ }
+  },
+  ticket: { /* ... */ },
+  // 新增业务类型只需注册handler
+  spa: { /* ... */ },
+  dining: { /* ... */ }
+};
+
+// 使用
+const handler = BizTypeHandlers[item.bizType];
+await handler.deductStock(item.bizId, stockParams, transaction);
+3.3 Redis缓存设计缺失
+方案中提到Redis但没具体设计，补充如下：
+
+javascript
+// 缓存设计
+class PackageCache {
+  // 套餐详情缓存（5分钟）
+  async getPackageDetail(packageId) {
+    const key = `package:detail:${packageId}`;
+    let detail = await redis.get(key);
+    if (!detail) {
+      detail = await ProductPackage.findByPk(packageId, { include: ['items'] });
+      await redis.setex(key, 300, JSON.stringify(detail));
+    }
+    return detail;
+  }
+  
+  // 套餐某日库存缓存（30秒，避免频繁查底层）
+  async getPackageStock(packageId, date) {
+    const key = `package:stock:${packageId}:${date}`;
+    let stock = await redis.get(key);
+    if (!stock) {
+      stock = await this.calculateStock(packageId, date);
+      await redis.setex(key, 30, stock);
+    }
+    return stock;
+  }
+  
+  // 扣库存后主动失效缓存
+  async invalidateStock(packageId, date) {
+    await redis.del(`package:stock:${packageId}:${date}`);
+  }
+}
+四、业务规则补充
+4.1 套餐与促销活动的关系
+问题未定义：
+
+套餐能否叠加优惠券？
+
+套餐能否参与满减活动？
+
+套餐能否使用会员积分？
+
+建议补充：
+
+sql
+-- product_packages 表新增字段
+ALTER TABLE product_packages ADD COLUMN `allowCoupon` TINYINT DEFAULT 1 COMMENT '是否允许使用优惠券';
+ALTER TABLE product_packages ADD COLUMN `allowPoints` TINYINT DEFAULT 1 COMMENT '是否允许使用积分';
+ALTER TABLE product_packages ADD COLUMN `maxDiscountRate` DECIMAL(5,2) DEFAULT NULL COMMENT '最大折扣比例（如30表示最多打7折）';
+4.2 套餐与现有 RoomPackage 的关系
+问题：
+现有系统已有 RoomPackage（酒店自有套餐），新系统是替代还是并存？
+
+建议：
+
+javascript
+// 方案：并存，数据迁移
+// 1. 第一阶段：两套系统并行，新套餐走新表
+// 2. 第二阶段：将现有 RoomPackage 数据迁移到新表
+async function migrateRoomPackage() {
+  const oldPackages = await RoomPackage.findAll({
+    include: ['roomType', 'hotel']
+  });
+  
+  for (const old of oldPackages) {
+    await ProductPackage.create({
+      name: old.name,
+      type: 1, // 酒店套餐
+      items: [{
+        isPrimary: 1,
+        bizType: 'hotel',
+        bizId: old.roomTypeId,
+        quantity: old.nights || 1
+      }]
+    });
+  }
+}
+4.3 并发库存检查的边界情况
+问题：
+方案中的库存检查只校验了 availableStock >= needStock，但没有考虑 maxSaleNum 和底层库存的联动。
+
+场景：
+
+text
+套餐 maxSaleNum=50，已卖45份
+底层酒店房型5月1日库存=10份
+
+用户A买3份 → 校验通过（48<50，底层够）
+用户B买3份 → 校验通过（51>50？需要检查）
+
+问题：两个请求同时到达，都会通过 maxSaleNum 校验
+修复：
+
+javascript
+// 使用数据库行锁 + 原子操作
+async function deductStockAtomic(packageId, buyNum, transaction) {
+  // 原子性更新 soldStock，同时检查是否超限
+  const [affected] = await sequelize.query(`
+    UPDATE product_packages 
+    SET soldStock = soldStock + :buyNum,
+        status = IF(soldStock + :buyNum >= maxSaleNum AND maxSaleNum > 0, 3, status)
+    WHERE id = :packageId 
+      AND (maxSaleNum = 0 OR soldStock + :buyNum <= maxSaleNum)
+  `, {
+    replacements: { packageId, buyNum },
+    transaction
+  });
+  
+  if (affected === 0) {
+    throw new Error('套餐已售罄');
+  }
+}
+五、监控与运维建议
+5.1 关键指标监控
+javascript
+// 需要监控的指标
+- 套餐库存不足率（底层库存不足导致下单失败比例）
+- 套餐订单超时率（15分钟未支付比例）
+- 套餐核销率（核销订单/总订单）
+- 各bizType的调用耗时（酒店服务、票务服务）
+- 分布式锁等待时间
+5.2 数据一致性对账
+sql
+-- 建议每日对账任务
+CREATE TABLE `package_reconciliation` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `date` DATE NOT NULL,
+  `packageId` INT NOT NULL,
+  `expectedStock` INT COMMENT '预期已售（订单明细统计）',
+  `actualStock` INT COMMENT '实际库存扣减（底层统计）',
+  `diff` INT COMMENT '差异',
+  `status` TINYINT DEFAULT 0 COMMENT '0=待处理 1=已修复',
+  INDEX `idx_date_package` (`date`, `packageId`)
+);
+六、总结建议优先级
+优先级	问题	建议	影响
+P0	多天酒店库存计算错误	修复为逐日取最小值	会导致超卖
+P0	订单表字段类型不匹配	用扩展表或改表结构	会导致数据异常
+P1	事务范围过大	两阶段提交或拆分事务	高并发死锁
+P1	combine类型日期计算	支持日期偏移	业务场景受限
+P2	价格与成本脱节	增加成本校验	运营亏损
+P2	缓存设计缺失	补充Redis缓存	性能问题
+P3	核销后业务系统同步	调用业务系统接口	状态不一致
+整体设计思路正确，但细节上需要优化。建议优先处理P0和P1的问题后再进入开发。
