@@ -1,0 +1,99 @@
+/*
+ * @描述: 
+ * @版本: 
+ * @作者: 
+ * @日期: ${year}-${month}-${day}
+ * @最后编辑者: sueRimn
+ * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
+ */
+// #!/usr/bin / env node
+
+/**
+ * Module dependencies.
+ */
+
+
+
+const { sequelize, mysql } = require('../mysql/index');
+const Summary = require('../models/Summary.js');  // 引入表模型
+const { setupAssociations } = require('../models/associations');  // 引入模型关联配置
+
+mysql(() => {
+  // 先建立模型关联关系
+  setupAssociations();
+
+  // 先同步表结构
+  // sequelize.sync({ force: false })  // force: false 不会删除已有表  true 会删除已有表
+  sequelize.sync({ force: false })  // 自动修改现有表结构，但不会删除表
+    .then(async () => {
+      console.log('数据库表同步完成');
+      const { app, initializeRedis, initializeCronJobs } = require('../app.js');
+      var debug = require('debug')('mynode:server');
+      var http = require('http');
+
+      // 初始化Redis连接
+      await initializeRedis();
+
+      // 初始化定时任务
+      initializeCronJobs();
+
+      var port = normalizePort(process.env.PORT || '3000');
+      app.set('port', port);
+
+      var server = http.createServer(app);
+
+      server.listen(port);
+      server.on('error', onError);
+      server.on('listening', onListening);
+
+      function normalizePort(val) {
+        var port = parseInt(val, 10);
+
+        if (isNaN(port)) {
+          return val;
+        }
+
+        if (port >= 0) {
+          return port;
+        }
+
+        return false;
+      }
+
+      function onError(error) {
+        if (error.syscall !== 'listen') {
+          throw error;
+        }
+
+        var bind = typeof port === 'string'
+          ? 'Pipe ' + port
+          : 'Port ' + port;
+
+        switch (error.code) {
+          case 'EACCES':
+            console.error(bind + ' requires elevated privileges');
+            process.exit(1);
+            break;
+          case 'EADDRINUSE':
+            console.error(bind + ' is already in use');
+            process.exit(1);
+            break;
+          default:
+            throw error;
+        }
+      }
+
+      function onListening() {
+        var addr = server.address();
+        var bind = typeof addr === 'string'
+          ? 'pipe ' + addr
+          : 'port ' + addr.port;
+        debug('Listening on ' + bind);
+      }
+    })
+    .catch(err => {
+      console.error('数据库同步失败:', err);
+    });
+});
+
+

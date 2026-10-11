@@ -1,0 +1,26 @@
+{
+  "development": {
+    "username": "root",
+    "password": "mysql",
+    "database": "my_nodemysql",
+    "host": "localhost",
+    "dialect": "mysql",
+    "timezone": "+08:00"
+  },
+  "test": {
+    "username": "root",
+    "password": "mysql",
+    "database": "my_nodemysql",
+    "host": "localhost",
+    "dialect": "mysql",
+    "timezone": "+08:00"
+  },
+  "production": {
+    "username": "hzymysql",
+    "password": "Hzy@2026#Mysql",
+    "database": "my_nodemysql",
+    "host": "localhost",
+    "dialect": "mysql",
+    "timezone": "+08:00"
+  }
+}
