@@ -68,11 +68,16 @@ const { campOrderParticipants } = require("./appointment/campOrderParticipantsMo
 const { CampSession } = require("./appointment/campSessionModel")
 const { Campsite } = require("./appointment/campsiteModel")
 
-//车位预约 
+//车位预约
 const { Parking } = require("./appointment/parkingModel")
 const { ParkingReservation } = require("./appointment/parkingReservation")
 const { ParkingSpot } = require("./appointment/parkingSpotModel")
 const { TicketType } = require("./appointment/ticketType")
+
+// 景区公交
+const { ScenicBus } = require("./appointment/scenicBusModel")
+const { ScenicBusOrder } = require("./appointment/scenicBusOrderModel")
+const { ScenicBusOrderTicket } = require("./appointment/scenicBusOrderTicketModel")
 
 
 
@@ -90,5 +95,6 @@ module.exports = {
     CompensationTask,
     RefundOrder,
     ProductPackage, PackageItem, PackagePriceRule, PackageDatePrice, PackageOrderDetail,
-    campOrders, campOrderParticipants, CampSession, Campsite, Parking, ParkingReservation, ParkingSpot, TicketType
+    campOrders, campOrderParticipants, CampSession, Campsite, Parking, ParkingReservation, ParkingSpot, TicketType,
+    ScenicBus, ScenicBusOrder, ScenicBusOrderTicket
 };
