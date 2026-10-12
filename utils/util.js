@@ -4,7 +4,7 @@
  * @Author: sueRimn
  * @Date: 2025-07-22 09:49:18
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2026-07-30 15:26:19
+ * @LastEditTime: 2026-10-12 10:39:04
  */
 
 const crypto = require('crypto');  // 引入 Node.js 的内置加密模块
@@ -82,17 +82,55 @@ async function generateOrderNo(beginning) {
 }
 
 /**
- * 生成核销编码（大写字母 + 数字）
- * @param {number} length - 编码长度，默认6位
- * @returns {string} 核销编码
+ * 生成核销编码
  */
-function generateWriteOffCode(length = 6) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < length; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去易混 0O1I
+function randomCode(len = 8) {
+    const bytes = crypto.randomBytes(len);
+    let s = '';
+    for (let i = 0; i < len; i++) s += CHARS[bytes[i] % CHARS.length];
+    return s;
+}
+
+function formatDate() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}${m}${day}`;
+}
+
+async function refillPool(date, target = 200000) {
+    const key = `verify:pool:${date}`;
+    const size = await redisService.scardFun(key);
+    if (size >= target) return;
+    const need = Math.min(target - size, 10000);
+    const set = new Set();
+    while (set.size < need) set.add(randomCode(8));
+    await redisService.saddFun(key, [...set]);
+    await redisService.expire(key, 3 * 24 * 3600);
+}
+
+async function generateWriteOffCode(count) {
+    const date = formatDate(); // 只调一次
+    const key = `verify:pool:${date}`;
+
+    const codes = [];
+    let guard = 0; // 防死循环
+
+    while (codes.length < count) {
+        const need = count - codes.length;
+        const got = await redisService.spopFun(key, need);
+        if (got.length > 0) {
+            codes.push(...got);
+            continue;
+        }
+        // 池子空了，补池
+        if (++guard > 50) throw new Error('码池不足，补池多次仍无法满足');
+        await refillPool(date);
     }
-    return code;
+    // 拼日期 → 20261012 + A3K9X2M7 = 20261012A3K9X2M7
+    return codes.map(c => date + c);
 }
 
 // 格式化返回数据

@@ -147,7 +147,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.sadd(String(key), members);
+      return await client.sAdd(String(key), members);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -165,7 +165,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.smembers(String(key));
+      return await client.sMembers(String(key));
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -184,7 +184,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.sismember(String(key), String(member));
+      return await client.sIsMember(String(key), String(member));
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -203,7 +203,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.srem(String(key), members);
+      return await client.sRem(String(key), members);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -221,7 +221,27 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.scard(String(key));
+      return await client.sCard(String(key));
+    } finally {
+      if (client) {
+        await this.pool.releaseClient(client);
+      }
+    }
+  }
+
+  /**
+   * 集合操作 - 随机弹出成员
+   * @async
+   * @param {string} key - 集合键名
+   * @param {number} [count=1] - 要弹出的成员数量
+   * @returns {string[]} 弹出的成员数组（成员不足时返回已有部分，可能为空数组）
+   */
+  async spopFun(key, count = 1) {
+    let client = null;
+    try {
+      client = await this.pool.getClient();
+      // node-redis v5 带数量的 SPOP 是独立方法 sPopCount（sPop 不接受 count 参数），键不存在时返回空数组
+      return await client.sPopCount(String(key), count);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -242,7 +262,7 @@ class RedisService {
     try {
       client = await this.pool.getClient();
       const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-      return await client.hset(String(key), String(field), stringValue);
+      return await client.hSet(String(key), String(field), stringValue);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -266,7 +286,7 @@ class RedisService {
       for (const [field, value] of Object.entries(object)) {
         serializedObject[field] = typeof value === 'object' ? JSON.stringify(value) : String(value);
       }
-      return await client.hset(String(key), serializedObject);
+      return await client.hSet(String(key), serializedObject);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -286,7 +306,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      const value = await client.hget(String(key), String(field));
+      const value = await client.hGet(String(key), String(field));
       if (value === null) return null;
 
       if (parseJson) {
@@ -315,7 +335,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      const values = await client.hgetall(String(key));
+      const values = await client.hGetAll(String(key));
 
       if (parseJson && values) {
         // 尝试解析每个值
@@ -348,7 +368,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.hkeys(String(key));
+      return await client.hKeys(String(key));
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -367,7 +387,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      const values = await client.hvals(String(key));
+      const values = await client.hVals(String(key));
 
       if (parseJson) {
         return values.map(value => {
@@ -398,7 +418,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.hdel(String(key), fields);
+      return await client.hDel(String(key), fields);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -417,7 +437,7 @@ class RedisService {
     let client = null;
     try {
       client = await this.pool.getClient();
-      return await client.hexists(String(key), String(field));
+      return await client.hExists(String(key), String(field));
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -686,12 +706,12 @@ class RedisService {
       client = await this.pool.getClient();
       // 使用Lua脚本保证原子性操作，避免释放其他进程的锁
       const script = `
-        if redis.call('get', KEYS[1]) == ARGV[1] then
-          return redis.call('del', KEYS[1])
-        else
-          return 0
-        end
-      `;
+          if redis.call('get', KEYS[1]) == ARGV[1] then
+            return redis.call('del', KEYS[1])
+          else
+            return 0
+          end
+        `;
       const result = await client.eval(script, { keys: [lockKey], arguments: [lockValue] });
       return result === 1;
     } finally {
