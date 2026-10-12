@@ -24,6 +24,7 @@ const { Campsite } = require('./appointment/campsiteModel');
 const { TicketType } = require('./appointment/ticketType');
 const { CampSession } = require("./appointment/campSessionModel");
 const { campOrders } = require("./appointment/campOrdersModel");
+const { campOrderParticipants } = require("./appointment/campOrderParticipantsModel");
 const { Parking } = require('./appointment/parkingModel');
 const { ParkingReservation } = require('./appointment/parkingReservation');
 const { ParkingSpot } = require('./appointment/parkingSpotModel');
@@ -203,7 +204,7 @@ function setupAssociations() {
     });
 
     TicketType.hasMany(campOrders, {
-        foreignKey: 'ticketTypeId',
+        foreignKey: 'ticketId',
         sourceKey: 'id',
         as: 'orders',
         onDelete: 'CASCADE',
@@ -211,9 +212,26 @@ function setupAssociations() {
     })
 
     campOrders.belongsTo(TicketType, {
-        foreignKey: 'ticketTypeId',
+        foreignKey: 'ticketId',
         targetKey: 'id',
         as: 'ticketType',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
+
+    // campOrders & campOrderParticipants（订单 -> 营员明细，一单多人）
+    campOrders.hasMany(campOrderParticipants, {
+        foreignKey: 'orderId',
+        sourceKey: 'id',
+        as: 'participants',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
+
+    campOrderParticipants.belongsTo(campOrders, {
+        foreignKey: 'orderId',
+        targetKey: 'id',
+        as: 'order',
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
     })

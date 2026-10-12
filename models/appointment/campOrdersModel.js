@@ -26,90 +26,29 @@ const campOrders = sequelize.define("campOrders", {
         allowNull: false,
         comment: '用户ID',
     },
-    // 营员姓名
-    camperName: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        comment: '营员姓名',
-    },
-    // 营员性别
-    camperGender: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 1,
-        comment: '营员性别 1:男 2:女',
-    },
-    // 营员年龄
-    camperAge: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        comment: '营员年龄',
-    },
-    // 身份证号
-    idCard: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        comment: '营员身份证号',
-    },
-    // 联系电话
-    phone: {
+    // 联系电话（下单人）
+    userPhone: {
         type: DataTypes.STRING,
         allowNull: false,
         comment: '联系电话',
     },
-    // 家长姓名
-    parentName: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        comment: '家长姓名',
-    },
-    // 家长联系电话
-    parentPhone: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        comment: '家长联系电话',
-    },
-    // 家长身份证号
-    parentIdCard: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        comment: '家长身份证号',
-    },
     // 夏令营票ID
     ticketId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         allowNull: false,
         comment: '关联夏令营票ID',
     },
-    // 身高
-    height: {
-        type: DataTypes.DECIMAL(5, 2),
-        allowNull: true,
-        comment: '身高',
+    // 营地ID
+    campsiteId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: '关联营地ID',
     },
-    // 体重
-    weight: {
-        type: DataTypes.DECIMAL(5, 2),
-        allowNull: true,
-        comment: '体重',
-    },
-    // 来营方式
-    way: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        comment: '来营方式',
-    },
-    // 注意事项
-    notice: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: '注意事项',
-    },
-    // 饮食禁忌
-    dietaryRestrictions: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: '饮食禁忌',
+    // 场次ID
+    sessionId: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+        comment: '关联场次ID',
     },
     // 开始日期
     startDate: {
@@ -123,7 +62,7 @@ const campOrders = sequelize.define("campOrders", {
         allowNull: false,
         comment: '结营日期',
     },
-    // 人数
+    // 人数（与营员明细表 campOrderParticipants 记录数一致）
     peopleCount: {
         type: DataTypes.INTEGER,
         allowNull: false,

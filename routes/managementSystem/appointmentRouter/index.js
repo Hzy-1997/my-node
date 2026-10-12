@@ -21,8 +21,18 @@ router.post("/campsiteOperation", campsiteInterface.campsiteOperation)
 router.get("/campsiteList", campsiteInterface.getCampsiteList)
 router.post("/campsiteOperate", campsiteInterface.campsiteOperate)
 
+// 夏令营期数
 router.post("/campsiteSessionList", campsiteInterface.getCampsiteSessionList)
 router.post("/campsiteAppointment", campsiteInterface.campsiteAppointment)
+
+// 夏令营票档
+router.post("/campsiteTicketOperation", campsiteInterface.ticketTypeOperation)
+router.post("/campsiteTicketList", campsiteInterface.getCampsiteTicketList)
+
+// 夏令营详情
+router.get("/campsiteDetail", campsiteInterface.getCampsiteDetail)
+// 期数详情
+router.get("/campsiteSessionDetail", campsiteInterface.getCampsiteSessionDetail)
 
 
 

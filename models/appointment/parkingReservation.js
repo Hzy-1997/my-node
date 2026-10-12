@@ -1,8 +1,8 @@
-// 停车场表
+
 const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require("../../mysql/index");
 
-
+// 停车场表
 const ParkingReservation = sequelize.define("ParkingReservation", {
     id: {
         type: DataTypes.INTEGER,

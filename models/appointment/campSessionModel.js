@@ -7,11 +7,11 @@
  * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
  */
 
-// 营地预约
+
 const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require("../../mysql/index");
 
-
+// 营地预约
 const CampSession = sequelize.define("CampSession", {
     id: {
         type: DataTypes.BIGINT,
@@ -37,6 +37,16 @@ const CampSession = sequelize.define("CampSession", {
         type: DataTypes.DATEONLY,
         allowNull: false,
         comment: "结束日期，如：2026-08-21",
+    },
+    totalInventory: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        comment: "该期总容量/可参加人数（0表示不限）",
+    },
+    soldCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        comment: "已售人数",
     },
     sortOrder: {
         type: DataTypes.INTEGER,

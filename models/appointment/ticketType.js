@@ -1,14 +1,9 @@
-/*
- * @描述: 
- * @版本: 
- * @作者: 
- * @日期: ${year}-${month}-${day}
- * @最后编辑者: sueRimn
- * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
- */
+
 const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require("../../mysql/index");
 
+
+// 夏令营票档
 const TicketType = sequelize.define("TicketType", {
     id: {
         type: DataTypes.BIGINT,
@@ -26,16 +21,6 @@ const TicketType = sequelize.define("TicketType", {
         allowNull: true,
         comment: "关联场次ID",
     },
-    dateTier: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        comment: "日期档次配置，包含有效期范围等",
-    },
-    activityDates: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        comment: "活动日期，支持多个日期或日期范围",
-    },
 
     ticketName: {
         type: DataTypes.STRING(100),
@@ -46,21 +31,6 @@ const TicketType = sequelize.define("TicketType", {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         comment: "总价（元）",
-    },
-    totalInventory: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        comment: "该票档总库存（0表示不限）",
-    },
-    soldCount: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        comment: "已售数量",
-    },
-    sellableCount: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        comment: "可售数量（0表示不限）",
     },
     sortOrder: {
         type: DataTypes.INTEGER,

@@ -6,10 +6,12 @@
  * @最后编辑者: sueRimn
  * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
  */
-// 营地预约
+
 const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require("../../mysql/index");
 
+
+// 营地预约
 const Campsite = sequelize.define("Campsite", {
     id: {
         type: DataTypes.INTEGER,
@@ -22,15 +24,10 @@ const Campsite = sequelize.define("Campsite", {
         allowNull: true,
         comment: "夏令营名称"
     },
-    price: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        comment: "价格"
-    },
     description: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true,
-        comment: "描述"
+        comment: "详细介绍",
     },
     image: {
         type: DataTypes.STRING,
@@ -53,11 +50,6 @@ const Campsite = sequelize.define("Campsite", {
         defaultValue: [],
         comment: '标签列表）',
     },
-    description: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-        comment: "详细介绍",
-    },
     phone: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -72,12 +64,6 @@ const Campsite = sequelize.define("Campsite", {
         type: DataTypes.STRING,
         allowNull: true,
         comment: "位置链接",
-    },
-    activityDates: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: [],
-        comment: "活动日期列表",
     },
     sortOrder: {
         type: DataTypes.INTEGER,

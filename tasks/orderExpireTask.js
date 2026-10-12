@@ -11,7 +11,7 @@
  *                                      （cancel:data 从未写入，从 DB 推导恢复）
  *   酒店 HotelOrder      status=1       → 置 status=5 + refundHotel 恢复 Redis 房型库存
  *                                      （DB 库存支付成功才会 sync，无需回补）
- *   夏令 campOrders     payStatus=1    → 置 orderStatus=4 + 回补 TicketType 计数器
+ *   夏令 campOrders     payStatus=1    → 置 orderStatus=4 + 回补 CampSession.soldCount
  *   停车 ParkingReservation  超时未支付 → 置 status=2 取消；
  *                          已支付但时段结束未使用 → 置 status=4 作废（订单终结）
  *
@@ -23,7 +23,7 @@ const cron = require('node-cron');
 const { Op } = require('sequelize');
 const {
     Order, PackageOrderDetail, HotelOrder, campOrders,
-    TicketType, RoomPackage, PackageItem, ParkingReservation,
+    CampSession, RoomPackage, PackageItem, ParkingReservation,
 } = require('../models/Summary');
 const redisService = require('../services/redisService');
 const hotelPurchaseService = require('../services/hotelPurchaseService');
@@ -155,8 +155,8 @@ async function cancelExpiredHotelOrders(expireTime) {
 }
 
 /**
- * 夏令订单：置 orderStatus=4（已取消）+ 回补 TicketType 计数器
- * （下单时 sellableCount-1 / soldCount+1，此处做逆操作）
+ * 夏令订单：置 orderStatus=4（已取消）+ 回补 CampSession.soldCount
+ * （下单时按报名人数 soldCount+peopleCount，此处做逆操作）
  */
 async function cancelExpiredCampOrders(expireTime) {
     const expired = await campOrders.findAll({
@@ -176,9 +176,8 @@ async function cancelExpiredCampOrders(expireTime) {
             );
             if (updated === 0) continue;
 
-            // 回补票档库存（计数器模型，DB 原子操作）
-            await TicketType.increment('sellableCount', { by: 1, where: { id: order.ticketId } });
-            await TicketType.decrement('soldCount', { by: 1, where: { id: order.ticketId } });
+            // 回补场次库存（按订单报名人数，DB 原子操作）
+            await CampSession.decrement('soldCount', { by: order.peopleCount || 1, where: { id: order.sessionId } });
 
             console.log(`[OrderExpire] 夏令订单已取消并回补库存: ${order.orderNumber}`);
         } catch (error) {

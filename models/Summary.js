@@ -64,6 +64,7 @@ const { ProductPackage, PackageItem, PackagePriceRule, PackageDatePrice, Package
 
 // 夏令营
 const { campOrders } = require("./appointment/campOrdersModel")
+const { campOrderParticipants } = require("./appointment/campOrderParticipantsModel")
 const { CampSession } = require("./appointment/campSessionModel")
 const { Campsite } = require("./appointment/campsiteModel")
 
@@ -89,5 +90,5 @@ module.exports = {
     CompensationTask,
     RefundOrder,
     ProductPackage, PackageItem, PackagePriceRule, PackageDatePrice, PackageOrderDetail,
-    campOrders, CampSession, Campsite, Parking, ParkingReservation, ParkingSpot, TicketType
+    campOrders, campOrderParticipants, CampSession, Campsite, Parking, ParkingReservation, ParkingSpot, TicketType
 };
