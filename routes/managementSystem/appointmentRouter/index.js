@@ -14,6 +14,7 @@ const { checkToken } = require("../../../utils/jwt")
 
 const campsiteInterface = require("./campsite")
 const parkingInterface = require("./parking")
+const scenicBusInterface = require("./scenicBus")
 
 
 // 夏令营
@@ -45,6 +46,24 @@ router.get("/parkingDetail", parkingInterface.parkingDetail)
 // 停车场车位
 router.get("/parkingSpots", parkingInterface.parkingSpots)
 router.post("/parkingSpotOperation", parkingInterface.parkingSpotOperation)
+
+
+// 景区公交商品
+router.post("/scenicBusOperation", scenicBusInterface.scenicBusOperation)
+router.get("/scenicBusList", scenicBusInterface.scenicBusList)
+router.get("/scenicBusDetail", scenicBusInterface.scenicBusDetail)
+
+// 景区公交购票（一单多票、一票一码）
+router.post("/scenicBusAppointment", scenicBusInterface.scenicBusAppointment)
+router.post("/scenicBusPay", scenicBusInterface.scenicBusPay) // 支付（占位，待接入支付渠道）
+
+// 景区公交订单
+router.get("/scenicBusOrderList", scenicBusInterface.scenicBusOrderList)
+router.get("/scenicBusOrderDetail", scenicBusInterface.scenicBusOrderDetail)
+
+// 车票核销与退票（以"票"为单位，单张核销/单张退票）
+router.post("/scenicBusVerify", scenicBusInterface.scenicBusVerify)
+router.post("/scenicBusRefund", scenicBusInterface.scenicBusRefund)
 
 
 
