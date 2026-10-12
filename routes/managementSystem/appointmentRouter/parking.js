@@ -415,7 +415,7 @@ exports.parkingAppointment = async (req, res) => {
 
             // 生成订单号
             let orderNo = await util.generateOrderNo("ORDPK");
-            const writeOffCode = util.generateWriteOffCode();
+            // const writeOffCode = await util.generateWriteOffCode();
 
             const reservation = await ParkingReservation.create(
                 {

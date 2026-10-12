@@ -22,12 +22,8 @@ const { ScenicBus, ScenicBusOrder, ScenicBusOrderTicket } = require("../../../mo
 async function generateUniqueVerifyCodes(count, t) {
     let codes = [];
     while (codes.length < count) {
-        // 批量生成候选码（Set 去重）
-        let batch = [];
-        for (let i = codes.length; i < count; i++) {
-            batch.push(util.generateWriteOffCode(10));
-        }
-        batch = [...new Set(batch)];
+        // 批量生成候选码（码池 SPOP 弹出，天然不重复），必须 await，否则 batch 装的是 Promise
+        const batch = await util.generateWriteOffCode(count - codes.length);
         // 查库排除已占用的核销码
         let existing = await ScenicBusOrderTicket.findAll({
             where: { verifyCode: batch },
