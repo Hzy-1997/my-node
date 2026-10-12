@@ -28,6 +28,9 @@ const { campOrderParticipants } = require("./appointment/campOrderParticipantsMo
 const { Parking } = require('./appointment/parkingModel');
 const { ParkingReservation } = require('./appointment/parkingReservation');
 const { ParkingSpot } = require('./appointment/parkingSpotModel');
+const { ScenicBus } = require('./appointment/scenicBusModel');
+const { ScenicBusOrder } = require('./appointment/scenicBusOrderModel');
+const { ScenicBusOrderTicket } = require('./appointment/scenicBusOrderTicketModel');
 
 
 
@@ -286,6 +289,43 @@ function setupAssociations() {
         as: 'spot'
     });
 
+
+    // ==================== 景区公交模块关联（ScenicBus / ScenicBusOrder / ScenicBusOrderTicket）====================
+
+    // ScenicBus & ScenicBusOrder（公交班次 -> 订单）
+    ScenicBus.hasMany(ScenicBusOrder, {
+        foreignKey: 'scenicBusId',
+        sourceKey: 'id',
+        as: 'orders',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    });
+
+    ScenicBusOrder.belongsTo(ScenicBus, {
+        foreignKey: 'scenicBusId',
+        targetKey: 'id',
+        as: 'scenicBus',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    });
+
+    // ScenicBusOrder & ScenicBusOrderTicket（订单 -> 车票明细，一单多票、一票一码）
+    // 核销与退票均以"票"为单位：单张票独立核销/退票，全部核销后订单才算完成
+    ScenicBusOrder.hasMany(ScenicBusOrderTicket, {
+        foreignKey: 'orderId',
+        sourceKey: 'id',
+        as: 'tickets',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    });
+
+    ScenicBusOrderTicket.belongsTo(ScenicBusOrder, {
+        foreignKey: 'orderId',
+        targetKey: 'id',
+        as: 'order',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    });
 
     // ==================== Dept 自关联（父子部门） ====================
     Dept.belongsToMany(Dept, {
