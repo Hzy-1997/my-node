@@ -15,6 +15,7 @@ const appLogin = require("./login")
 router.post("/login", appLogin.createMember)
 router.post("/loginByPhone", appLogin.loginByPhone)
 router.get("/memberInfo", appLogin.getUserInfo)
+router.post("/updateUserInfo", appLogin.updateUserInfo)
 
 
 

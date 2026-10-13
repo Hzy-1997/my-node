@@ -16,6 +16,7 @@ router.get('/queryPayStatus', publicInterface.queryPayStatus);  // 主动查询�
 // 公共图片操作（所有业务共用）
 router.post('/uploadImg', publicInterface.uploadImg)   // 上传图片专用
 router.post('/deleteImg', publicInterface.deleteImg)  // 点击删除图片
+router.post('/uploadWxImg', publicInterface.uploadWxImg)  // 小程序图片上传
 
 
 

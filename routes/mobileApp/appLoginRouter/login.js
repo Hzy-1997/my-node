@@ -23,8 +23,6 @@ const { APP_ID, ACCESS_SECRET, secretJwt } = require('../../../config/index.js')
 // 引入模型
 const { Member } = require('../../../models/memberModel/index'); // 引入模型
 
-
-
 // 创建微信用户
 exports.createMember = async (req, res) => {
     try {
@@ -226,10 +224,48 @@ exports.getUserInfo = async (req, res) => {
         if (!data) {
             return res.json(util.fail("用户信息不存在"));
         }
-        data.dataValues.phone = data.dataValues.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
-        data.dataValues.idCard = data.dataValues.idCard.replace(/(\d{6})\d{8}(\d{4})/, '$1********$2')
+        data.dataValues.phone = util.encrypt(data.dataValues.phone)
+        data.dataValues.idCard = util.encrypt(data.dataValues.idCard)
         const str = util.encrypt(JSON.stringify(data))
         res.json(util.success("获取用户信息成功", str));
+    } catch (error) {
+        res.json(util.fail("操作失败", error));
+    }
+}
+
+// 更新用户信息
+exports.updateUserInfo = async function updateUserInfo(req, res) {
+    const { id, openld } = req.body;
+
+    try {
+
+        if (!id) {
+            return res.json(util.fail("缺少必要参数，更新失败！"));
+        }
+
+        let cachedData = await Member.findOne({
+            where: { id: id },
+        });
+
+        if (!cachedData) {
+            return res.json(util.fail("用户信息不存在"));
+        }
+
+        // 处理敏感信息
+
+        if (req.body.phone) req.body.phone = util.decrypt(req.body.phone)
+        if (req.body.idCard) req.body.idCard = util.decrypt(req.body.idCard)
+
+        console.log("解密了吗？", req.body)
+
+        // 更新用户信息
+        await Member.update({
+            ...req.body,
+        }, {
+            where: { id: id },
+        });
+        res.json(util.success("操作成功"));
+
     } catch (error) {
         res.json(util.fail("操作失败", error));
     }
@@ -293,3 +329,9 @@ exports.getUserInfo = async (req, res) => {
 //         res.json(util.fail("操作失败", error));
 //     }
 // };
+
+
+// 更新用户信息
+
+
+// 
