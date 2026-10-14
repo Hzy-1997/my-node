@@ -726,42 +726,30 @@ exports.deleteImg = async (req, res, next) => {
     }
 };
 
-// 上传图片
-exports.uploadImg = async (req, res) => {
+// 小程序图片上传（上传至阿里云 OSS，返回完整可访问 URL）
+exports.uploadWxImg = async (req, res) => {
     try {
         singleFileUpload(req, res, async function (error) {
             if (error) {
-                return res.json(util.fail(error));
+                return res.json(util.fail(error.message || error));
             }
             if (!req.file) {
                 return res.json(util.fail("请选择要上传的文件。"));
             }
             try {
-                const { path, filename } = req.file;
-                let imgRoute = {
-                    imgRoute: path + "/" + filename,
+                // multer-aliyun-oss 返回的 req.file.url 为 OSS 完整访问地址
+                const { url, path, filename } = req.file;
+                return res.json(util.success("上传文件信息成功", {
+                    imgUrl: url,                      // 完整 URL，小程序直接使用
+                    imgRoute: path + "/" + filename,  // OSS 相对路径
                     file: req.file,
-                };
-                return res.json(util.success("上传文件信息成功", imgRoute));
+                }));
             } catch (dbError) {
                 return res.json(util.fail("上传文件信息失败"));
             }
         });
     } catch (error) {
-        return res.json(util.fail(error));
-    }
-};
-
-// 点击删除图片
-exports.deleteImg = async (req, res, next) => {
-    try {
-        const { deleteImageList } = req.body;
-        if (!Array.isArray(deleteImageList)) return res.json(util.fail("传递信息有误"));
-        let answer = await deleteImage(deleteImageList);
-        if (answer.status != 200) return res.json(util.fail("删除失败"));
-        return res.json(util.success("", "删除图片"));
-    } catch (error) {
-        return res.json(util.fail(error));
+        return res.json(util.fail(error.message || error));
     }
 };
 
