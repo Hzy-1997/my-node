@@ -15,6 +15,8 @@ const { Sequelize, DataTypes } = require('sequelize');
 var jwt = require('jsonwebtoken');
 const util = require("../../../utils/util");
 const axios = require('axios');
+const FormData = require('form-data');
+const multer = require('multer');
 
 const redisService = require('../../../services/redisService');
 
@@ -27,6 +29,7 @@ const { Member } = require('../../../models/memberModel/index'); // 引入模型
 exports.createMember = async (req, res) => {
     try {
         const { code, userName, avatar } = req.body;
+
         const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${APP_ID}&secret=${ACCESS_SECRET}&js_code=${code}&grant_type=authorization_code`;
         let infor = await axios.get(url)
 
@@ -37,8 +40,7 @@ exports.createMember = async (req, res) => {
 
         const openid = infor.data.openid;
 
-        const urltoken = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${ACCESS_SECRET}`
-        const response = await axios.get(urltoken)
+        // let accessToken = await getWxAccessToken();
 
         // 查询用户是否已存在
         let user = await Member.findOne({
@@ -74,12 +76,48 @@ exports.createMember = async (req, res) => {
 
         res.json(util.success("操作成功", {
             token: token,
-            accessToken: response.data.access_token,
+            // accessToken: accessToken,
         }))
     } catch (error) {
         res.json(util.fail("操作失败"))
     }
 }
+
+
+// 模块级变量，记录正在进行的 token 获取 Promise
+// 获取微信access_token
+// 缓存10分钟，避免频繁请求微信
+// 200秒过期，确保在过期前有时间刷新
+let tokenPromise = null;
+
+const getWxAccessToken = async () => {
+    const cacheKey = `accessToken:wx:${APP_ID}`;
+
+    // 1. 先查缓存
+    const cached = await redisService.getFun(cacheKey);
+    if (cached) return cached;
+
+    // 2. 如果已经有请求在获取 token，直接等它，不要再发一次
+    if (tokenPromise) return tokenPromise;
+
+    // 3. 第一个进来的请求，负责去获取 token
+    tokenPromise = (async () => {
+        try {
+            const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${ACCESS_SECRET}`;
+            const { data } = await axios.get(url);
+            if (!data.access_token) {
+                throw new Error(`获取 token 失败: ${data.errmsg}`);
+            }
+            await redisService.setFun(cacheKey, data.access_token, data.expires_in - 200);
+            return data.access_token;
+        } finally {
+            // 无论成功失败，都要清空，让下次能重新获取
+            tokenPromise = null;
+        }
+    })();
+
+    return tokenPromise;
+};
 
 // 手机号一键登录
 exports.loginByPhone = async (req, res) => {
@@ -104,9 +142,8 @@ exports.loginByPhone = async (req, res) => {
             return res.json(util.fail("手机号解密失败"));
         }
 
-        // 3. 获取access_token（如果需要）
-        const tokenUrl = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${ACCESS_SECRET}`;
-        const tokenResponse = await axios.get(tokenUrl);
+        // 3. 获取access_token（如果需要） tokenResponse
+        let accessToken = await getWxAccessToken();
 
         // 4. 查询或创建用户
         let user = await Member.findOne({
@@ -149,7 +186,7 @@ exports.loginByPhone = async (req, res) => {
         // 6. 返回成功
         res.json(util.success("登录成功", {
             token: token,
-            accessToken: tokenResponse.data.access_token,
+            accessToken: accessToken,
             userInfo: {
                 id: userInfo.id,
                 phone: phoneNumber,
@@ -224,6 +261,8 @@ exports.getUserInfo = async (req, res) => {
         if (!data) {
             return res.json(util.fail("用户信息不存在"));
         }
+
+        // 对敏感字段单独加密，前端解密整体后还需再解一次
         data.dataValues.phone = util.encrypt(data.dataValues.phone)
         data.dataValues.idCard = util.encrypt(data.dataValues.idCard)
         const str = util.encrypt(JSON.stringify(data))
@@ -234,8 +273,8 @@ exports.getUserInfo = async (req, res) => {
 }
 
 // 更新用户信息
-exports.updateUserInfo = async function updateUserInfo(req, res) {
-    const { id, openld } = req.body;
+exports.updateUserInfo = async (req, res) => {
+    const { id } = req.body;
 
     try {
 
@@ -252,12 +291,8 @@ exports.updateUserInfo = async function updateUserInfo(req, res) {
         }
 
         // 处理敏感信息
-
         if (req.body.phone) req.body.phone = util.decrypt(req.body.phone)
         if (req.body.idCard) req.body.idCard = util.decrypt(req.body.idCard)
-
-        console.log("解密了吗？", req.body)
-
         // 更新用户信息
         await Member.update({
             ...req.body,
@@ -268,6 +303,46 @@ exports.updateUserInfo = async function updateUserInfo(req, res) {
 
     } catch (error) {
         res.json(util.fail("操作失败", error));
+    }
+}
+
+// 身份证照片识别
+exports.recognizeIdCard = async (req, res) => {
+
+    try {
+
+        console.log(req.body)
+        if (!req.file) {
+            return res.json(util.fail('请上传图片文件'));
+        }
+
+        if (req.file.size > 2 * 1024 * 1024) {
+            return res.json(util.fail('图片不能超过 2M'));
+        }
+
+        // 1. 构造 form-data，把图片传给微信
+        const form = new FormData();
+        form.append('img', req.file.buffer, {
+            filename: 'idcard.jpg',
+            contentType: req.file.mimetype,
+        });
+
+        let accessToken = await getWxAccessToken();
+        const wxUrl = `https://api.weixin.qq.com/cv/ocr/idcard?access_token=${accessToken}`
+
+
+        // 2. 发起请求到微信服务器
+        const wxRes = await axios.post(wxUrl, form, {
+            headers: form.getHeaders(),
+        });
+
+        // 4. 返回识别结果给前端
+        return res.json(util.success("操作成功", wxRes.data));
+
+    } catch (error) {
+        const detail = error.response?.data || error.message;
+        console.error('身份证识别失败:', detail);
+        res.json(util.fail("操作失败", detail));
     }
 }
 

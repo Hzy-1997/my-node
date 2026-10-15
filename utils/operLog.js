@@ -71,7 +71,8 @@ const recordOperLog = async (options, req, res, startTime) => {
         if (req.user) {
             operatorName = req.user.username || req.user.account || '未知用户';
             operatorType = req.user.job || '普通用户';
-            deptName = req.user.department.deptName || '未知部门';
+            // deptName = req.user.department.deptName || '未知部门';
+            deptName = req.user?.department?.deptName || '未知部门';
         }
 
         const logData = {
