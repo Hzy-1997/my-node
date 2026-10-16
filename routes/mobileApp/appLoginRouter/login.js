@@ -51,19 +51,14 @@ exports.createMember = async (req, res) => {
 
         let userInfo;
         if (user) {
-            // 用户已存在，更新信息
-            user.userName = userName || user.userName;
-            user.avatar = avatar || user.avatar;
-            await user.save();
+            // 用户已存在，不覆盖用户自己设置的头像和昵称
             userInfo = user;
         } else {
-            // 用户不存在，创建新用户
-            let userPayload = {
+            userInfo = await Member.create({
                 userName: userName,
                 openld: openid,
                 avatar: avatar,
-            }
-            userInfo = await Member.create(userPayload)
+            })
         }
 
         let tokenPayload = {
