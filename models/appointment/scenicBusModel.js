@@ -15,6 +15,21 @@ const ScenicBus = sequelize.define('scenicBus', {
         allowNull: false,
         comment: '标题',
     },
+
+    // 起点
+    startStation: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: '起点',
+    },
+
+    // 终点
+    endStation: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: '终点',
+    },
+
     image: {
         type: DataTypes.STRING,
         allowNull: false,
