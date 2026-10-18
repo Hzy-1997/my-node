@@ -139,13 +139,14 @@ exports.scenicBusOperation = async (req, res) => {
 // 商品列表
 exports.scenicBusList = async (req, res) => {
     try {
-        let { page = 1, pageSize = 10, title, status } = req.query
+        let { page = 1, pageSize = 10, title, status, ticketType } = req.query
         page = parseInt(page);
         pageSize = parseInt(pageSize);
 
         let where = {}
         if (title) where.title = { [Op.like]: `%${title}%` }
         if (status) where.status = status
+        if (ticketType) where.ticketType = ticketType
 
         const { count, rows } = await ScenicBus.findAndCountAll({
             where,
@@ -235,7 +236,7 @@ exports.scenicBusAppointment = async (req, res) => {
             const phone = userPhone ? util.decrypt(userPhone) : null;
 
             // 生成订单号
-            const orderNo = await util.generateOrderNo("ORDSCENIC");
+            const orderNo = await util.generateOrderNo("ORDBUS");
 
             // 金额以商品当前售价为准（快照）
             const unitPrice = parseFloat(lockedBus.price);
