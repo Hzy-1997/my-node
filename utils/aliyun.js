@@ -102,6 +102,17 @@ const config = {
     secure: true, // 使用 HTTPS
 };
 
+// 合法分类白名单，防止路径穿越
+const ALLOWED_CATEGORIES = [
+    'avatar',  // 头像
+    'ticket',  // 票务
+    'hotel',   // 酒店
+    'package', // 套餐
+    'parking', // 停车场
+    'camp',    // 露营
+    'common'   // 公共
+];
+
 // 创建一个 OSS 客户端
 const client = new OSS(config);
 
@@ -117,11 +128,17 @@ function generateDatePath() {
 // multer 配置信息
 const upload = multer({
     storage: MAO({
-        config: config,   // 阿里云配置信息
+        config: config,   
         // 修改上传目录为日期目录，自动创建按日期的目录结构
         destination: (req, file, cb) => {
+            // 优先查询参数，其次路由参数，最后默认 common
+            let category = req.query.category || req.params.category || 'common';
+            // 白名单校验，非法值回退 common（也可直接报错）
+            if (!ALLOWED_CATEGORIES.includes(category)) {
+                category = 'common';
+            }
             const datePath = generateDatePath();
-            cb(null, "ceshiUp/" + datePath);  // 上传路径为按日期生成的目录
+            cb(null, `ceshiUp/${category}/${datePath}`);  // 上传路径为按日期生成的目录
         }
     }),
     limits: {

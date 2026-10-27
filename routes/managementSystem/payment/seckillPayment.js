@@ -199,8 +199,8 @@ exports.createOrder = async (req, res) => {
             userIdCard: user.idCard,
             userPhone: user.phone,
             buyNum: count,
-            orderStatus: 1,  // 待支付
-            verifyStatus: 1, // 未核销
+            payStatus: 1,    // 待支付（统一五态）
+            verifyStatus: 1, // 待核销
             createTime: new Date().toISOString(),
             seat: seatData,
             // 预留字段，从Redis或数据库异步获取
@@ -440,13 +440,13 @@ exports.releaseAllSeats = async (req, res) => {
  */
 exports.queryOrderList = async (req, res) => {
     try {
-        const { outTradeNo, userPhone, userIdCard, startDate, endDate, orderStatus, ticketType } = req.query;
+        const { outTradeNo, userPhone, userIdCard, startDate, endDate, payStatus, ticketType } = req.query;
         const pageNum = parseInt(req.query.pageNum) || 1;
         const pageSize = parseInt(req.query.pageSize) || 10;
 
         let where = {}
         if (ticketType) where.goodsId = ticketType; // 查询票种
-        if (orderStatus) where.orderStatus = orderStatus; // 查询订单状态
+        if (payStatus) where.payStatus = payStatus; // 查询订单状态
         if (outTradeNo) where.orderNumber = { [Op.like]: `%${outTradeNo}%` };
         if (userPhone) where.userPhone = { [Op.like]: `%${util.decrypt(userPhone)}%` };
         if (userIdCard) where.userIdCard = { [Op.like]: `%${util.decrypt(userIdCard)}%` };
@@ -487,11 +487,11 @@ exports.queryOrderList = async (req, res) => {
  */
 exports.exportOrder = async (req, res) => {
     try {
-        const { outTradeNo, userPhone, userIdCard, startDate, endDate, orderStatus, ticketType, format = 'xlsx' } = req.body;
+        const { outTradeNo, userPhone, userIdCard, startDate, endDate, payStatus, ticketType, format = 'xlsx' } = req.body;
 
         let where = {}
         if (ticketType) where.goodsId = ticketType;
-        if (orderStatus) where.orderStatus = orderStatus;
+        if (payStatus) where.payStatus = payStatus;
         if (outTradeNo) where.orderNumber = { [Op.like]: `%${outTradeNo}%` };
         if (userPhone) where.userPhone = { [Op.like]: `%${util.decrypt(userPhone)}%` };
         if (userIdCard) where.userIdCard = { [Op.like]: `%${util.decrypt(userIdCard)}%` };
@@ -515,7 +515,8 @@ exports.exportOrder = async (req, res) => {
 
 
 
-        // 格式化数据
+        // 格式化数据（统一五态：1待支付 2已支付 3已完成 4已退款 5已取消；
+        // 核销三态：1待核销 2已完成 3已过期）
         const excelData = orders.map(order => ({
             orderNumber: order.orderNumber,
             title: order.title,
@@ -524,8 +525,8 @@ exports.exportOrder = async (req, res) => {
             userPhone: order.userPhone,
             userIdCard: order.userIdCard,
             buyNum: order.buyNum,
-            orderStatus: order.orderStatus === 1 ? '待支付' : order.orderStatus === 2 ? '待核销' : order.orderStatus === 3 ? '已取消' : order.orderStatus === 4 ? '已完成' : '已退款',
-            verifyStatus: order.verifyStatus === 1 ? '未核销' : order.verifyStatus === 2 ? '已核销' : '已取消',
+            payStatus: order.payStatus === 1 ? '待支付' : order.payStatus === 2 ? '已支付' : order.payStatus === 3 ? '已完成' : order.payStatus === 4 ? '已退款' : '已取消',
+            verifyStatus: order.verifyStatus === 1 ? '待核销' : order.verifyStatus === 2 ? '已完成' : '已过期',
             orderAmount: order.orderAmount,
             refundAmount: order.refundAmount,
             playDate: order.playDate
@@ -541,7 +542,7 @@ exports.exportOrder = async (req, res) => {
                 { header: "手机号", key: "userPhone", width: 15 },
                 { header: "身份证", key: "userIdCard", width: 20 },
                 { header: "购买数量", key: "buyNum", width: 12 },
-                { header: "订单状态", key: "orderStatus", width: 12 },
+                { header: "订单状态", key: "payStatus", width: 12 },
                 { header: "核销状态", key: "verifyStatus", width: 12 },
                 { header: "订单金额", key: "orderAmount", width: 12 },
                 { header: "退款金额", key: "refundAmount", width: 12 },
@@ -774,19 +775,19 @@ exports.handleOrderCancel = async (orderNo, cancelReason) => {
             isPackageOrder = !!order;
         }
 
-        if (!order || order.orderStatus !== 1) {
+        if (!order || order.payStatus !== 1) {
             await transaction.rollback();
             return { success: false, message: "订单状态不允许取消" };
         }
 
         if (isPackageOrder) {
             await PackageOrderDetail.update(
-                { orderStatus: 3, verifyStatus: 3 },
+                { payStatus: 5, cancelReason: cancelReason || '超时未支付自动取消' },
                 { where: { orderNumber: orderNo }, transaction },
             );
         } else {
             await Order.update(
-                { orderStatus: 3, verifyStatus: 3 },
+                { payStatus: 5, cancelReason: cancelReason || '超时未支付自动取消' },
                 { where: { orderNumber: orderNo }, transaction },
             );
 

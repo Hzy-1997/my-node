@@ -50,13 +50,13 @@ const ParkingReservation = sequelize.define("ParkingReservation", {
     // 身份证号
     idCard: {
         type: DataTypes.STRING,
-        allowNull: true, 
+        allowNull: true,
         comment: '身份证号',
     },
     // 联系电话
     phone: {
         type: DataTypes.STRING,
-        allowNull: false, 
+        allowNull: false,
         comment: '联系电话',
     },
     carNumber: {
@@ -79,11 +79,14 @@ const ParkingReservation = sequelize.define("ParkingReservation", {
         allowNull: false,
         comment: "预约金额",
     },
+    // 订单状态（统一五态，原独立 status 预约状态字段已废弃删除）
+    // 停车业务特殊性：支付成功即视为核销完成 → payStatus 1:待支付 → 3:已完成（跳过 2:已支付）；
+    // 用不用都不能退，仅管理员可强制退款 → 4:已退款；超时未支付/时段结束未支付 → 5:已取消（记录 cancelReason）
     payStatus: {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 1,
-        comment: '支付状态：1未支付 2已支付 3已退款',
+        comment: '订单状态：1-待支付 2-已支付(停车业务不使用) 3-已完成 4-已退款 5-已取消',
     },
     paymentTime: {
         type: DataTypes.DATE,
@@ -99,12 +102,6 @@ const ParkingReservation = sequelize.define("ParkingReservation", {
         type: DataTypes.STRING,
         allowNull: true,
         comment: "核销编码",
-    },
-    status: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-        comment: "预约状态(0:待确认,1:已确认,2:已取消,3:已完成,4:已作废)", // 4=已支付但未在预约时段内使用，订单终结不可再用
     },
     cancelReason: {
         type: DataTypes.STRING(255),

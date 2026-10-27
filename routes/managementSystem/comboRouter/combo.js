@@ -573,7 +573,7 @@ exports.buyCombo = async (req, res) => {
         buyNum: num,
         startDate: startDate,
         endDate: endDate,
-        orderStatus: 1, // 待支付
+        payStatus: 1, // 待支付（统一五态）
         createTime: new Date().toISOString(),
         // 从套餐获取价格
         unitPrice: combo.unitPrice,

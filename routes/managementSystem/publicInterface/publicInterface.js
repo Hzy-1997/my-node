@@ -167,13 +167,13 @@ exports.queryPayStatus = async (req, res) => {
             return res.json(util.fail('订单不存在'));
         }
 
-        // 2. 检查本地订单状态：若已不是"待支付"(status!==1)，直接返回当前状态
+        // 2. 检查本地订单状态：若已不是"待支付"(payStatus!==1)，直接返回当前状态
         const currentStatus = order[matchedHandler.statusField];
         if (currentStatus !== 1) {
             return res.json(util.success('订单已处理', {
                 orderNumber: outTradeNo,
                 localStatus: currentStatus,
-                alreadyPaid: [2, 4].includes(currentStatus),
+                alreadyPaid: [2, 3].includes(currentStatus),
                 queued: false,
             }));
         }
@@ -375,7 +375,7 @@ const restoreHotelStock = async (order, orderNumber) => {
 /**
  * 停车场退款后释放车位时段
  * 车位可用性由"时段重叠判断"实现，无需回补 Parking.availableCount 计数器；
- * 退款时 updateRefunded 已将预约单置为已取消（status=2），时段自动释放
+ * 退款时 updateRefunded 已将预约单 payStatus 置为已退款(4)，时段自动释放
  */
 const restoreParkingStock = async (order, orderNumber) => {
     try {
@@ -397,8 +397,8 @@ const refundHandlers = {
     ticket: {
         orderType: 1,
         model: Order,
-        statusField: 'orderStatus',         // 状态字段名
-        refundableStatuses: [2, 4],         // 可退款状态：已支付/已完成
+        statusField: 'payStatus',            // 状态字段名
+        refundableStatuses: [2, 3],          // 可退款状态：已支付/已完成
         amountField: 'orderAmount',
         // 计算退款金额（票务：全额退）
         calcRefund: (order, { forceRefund, reason }) => ({
@@ -407,11 +407,10 @@ const refundHandlers = {
             refundRuleDesc: '',
             isForceRefundFlag: false,
         }),
-        // 更新订单状态为已退款
+        // 更新订单状态为已退款（payStatus=4，履约状态不再单独标记）
         updateRefunded: (orderNumber, refundAmount, transaction) => Order.update({
-            orderStatus: 5,
+            payStatus: 4,
             refundAmount,
-            verifyStatus: 3
         }, { where: { orderNumber }, transaction }),
         // 恢复库存
         restoreStock: restoreTicketStock,
@@ -426,8 +425,8 @@ const refundHandlers = {
     package: {
         orderType: 2,
         model: PackageOrderDetail,
-        statusField: 'orderStatus',
-        refundableStatuses: [2, 4],
+        statusField: 'payStatus',
+        refundableStatuses: [2, 3],
         amountField: 'orderAmount',
         calcRefund: (order) => ({
             refundAmount: order.orderAmount,
@@ -436,9 +435,8 @@ const refundHandlers = {
             isForceRefundFlag: false,
         }),
         updateRefunded: (orderNumber, refundAmount, transaction) => PackageOrderDetail.update({
-            orderStatus: 5,
+            payStatus: 4,
             refundAmount,
-            verifyStatus: 3
         }, { where: { orderNumber }, transaction }),
         // 恢复库存 
         restoreStock: restorePackageStock,
@@ -452,8 +450,8 @@ const refundHandlers = {
     hotel: {
         orderType: 3,
         model: HotelOrder,
-        statusField: 'status',
-        refundableStatuses: [2, 4],
+        statusField: 'payStatus',
+        refundableStatuses: [2, 3],
         amountField: 'totalPrice',
         // 酒店退款：支持强制退款 + 阶梯扣款
         calcRefund: (order, { forceRefund, reason }) => {
@@ -476,9 +474,8 @@ const refundHandlers = {
             };
         },
         updateRefunded: (orderNumber, refundAmount, transaction) => HotelOrder.update({
-            status: 5,
+            payStatus: 4,
             refundAmount,
-            verifyStatus: 3
         }, { where: { orderNumber }, transaction }),
         restoreStock: restoreHotelStock,
         getRefundRecordExtras: (order) => ({
@@ -492,7 +489,7 @@ const refundHandlers = {
         orderType: 4,
         model: ParkingReservation,
         statusField: 'payStatus',
-        refundableStatuses: [2], // 可退状态：已支付（payStatus=2）
+        refundableStatuses: [3], // 可退状态：已完成（停车支付成功即核销完成，仅管理员可强制退款）
         amountField: 'orderAmount', // 退款金额字段名
         calcRefund: (order) => ({ // 计算退款金额（停车：全额退）
             refundAmount: order.orderAmount,
@@ -500,11 +497,10 @@ const refundHandlers = {
             refundRuleDesc: '',
             isForceRefundFlag: false,
         }),
-        // 已支付订单退款：payStatus 置为已退款(3)；未开始/进行中的预约置为已取消(2)以释放车位时段，已完成的保留完成状态
+        // 退款：payStatus 置为已退款(4)，时段自动释放（车位占位判断为 payStatus notIn [4,5]）
         updateRefunded: (orderNumber, refundAmount, transaction) => ParkingReservation.update({
-            payStatus: 3,
-            status: sequelize.literal('CASE WHEN status IN (0, 1) THEN 2 ELSE status END'),
-            cancelReason: '已退款自动取消',
+            payStatus: 4,
+            cancelReason: '管理员强制退款',
         }, { where: { orderNumber }, transaction }),
         //释放车位时段（预约单取消后时段自动可用）
         restoreStock: restoreParkingStock,
@@ -689,6 +685,12 @@ exports.refund = async (req, res) => {
 // ============================================================
 // 上传图片
 exports.uploadImg = async (req, res) => {
+
+    const category = req.query.category || 'common'; // 默认为common
+    if (!allowedCategory(category)) {
+        return res.json(util.fail('非法的上传分类'));
+    }
+
     try {
         singleFileUpload(req, res, async function (error) {
             if (error) {
@@ -713,21 +715,14 @@ exports.uploadImg = async (req, res) => {
     }
 };
 
-// 点击删除图片
-exports.deleteImg = async (req, res, next) => {
-    try {
-        const { deleteImageList } = req.body;
-        if (!Array.isArray(deleteImageList)) return res.json(util.fail("传递信息有误"));
-        let answer = await deleteImage(deleteImageList);
-        if (answer.status != 200) return res.json(util.fail("删除失败"));
-        return res.json(util.success("", "删除图片"));
-    } catch (error) {
-        return res.json(util.fail(error));
-    }
-};
-
 // 小程序图片上传（上传至阿里云 OSS，返回完整可访问 URL）
 exports.uploadWxImg = async (req, res) => {
+
+    const category = req.query.category || 'common'; // 默认为common
+    if (!allowedCategory(category)) {
+        return res.json(util.fail('非法的上传分类'));
+    }
+
     try {
         singleFileUpload(req, res, async function (error) {
             if (error) {
@@ -752,6 +747,29 @@ exports.uploadWxImg = async (req, res) => {
         return res.json(util.fail(error.message || error));
     }
 };
+
+// 图片目录白名单判断
+function allowedCategory(category) {
+    // 分类白名单（和 aliyun.js 保持一份，或抽成公共常量）
+    const ALLOWED_CATEGORIES = ['avatar', 'ticket', 'hotel', 'package', 'parking', 'camp', 'common'];
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+        return res.json(util.fail('非法的上传分类'));
+    }
+}
+
+// 点击删除图片
+exports.deleteImg = async (req, res, next) => {
+    try {
+        const { deleteImageList } = req.body;
+        if (!Array.isArray(deleteImageList)) return res.json(util.fail("传递信息有误"));
+        let answer = await deleteImage(deleteImageList);
+        if (answer.status != 200) return res.json(util.fail("删除失败"));
+        return res.json(util.success("", "删除图片"));
+    } catch (error) {
+        return res.json(util.fail(error));
+    }
+};
+
 
 
 

@@ -39,10 +39,17 @@ const PackageOrderDetail = sequelize.define('package_order_details', {
         defaultValue: 1,
         comment: '购买数量'
     },
-    orderStatus: {
+    // 订单状态（统一五态：1-待支付 2-已支付 3-已完成 4-已退款 5-已取消）
+    payStatus: {
         type: DataTypes.INTEGER,
         defaultValue: 1,
-        comment: '订单状态：1-待支付 2-待核销 3-已取消 4-已完成 5-已退款'
+        comment: '订单状态：1-待支付 2-已支付 3-已完成 4-已退款 5-已取消'
+    },
+    // 取消原因（payStatus=5 已取消时记录）
+    cancelReason: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        comment: '取消原因'
     },
     orderAmount: {
         type: DataTypes.DECIMAL(10, 2),
@@ -161,7 +168,7 @@ const PackageOrderDetail = sequelize.define('package_order_details', {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 1,
-        comment: '核销状态：1=未核销 2=已核销'
+        comment: '核销状态：1=待核销 2=已完成(已核销) 3=已过期(超使用期未核销)'
     },
     verifyTime: {
         type: DataTypes.DATE,

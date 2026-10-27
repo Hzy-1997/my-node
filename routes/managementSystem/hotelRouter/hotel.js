@@ -574,9 +574,6 @@ exports.hotelRoomBook = async (req, res) => {
     }
     try {
 
-
-
-
         const roomType = await RoomType.findByPk(roomTypeId);
         if (!roomType) {
             return res.json(util.fail('房型不存在'));
@@ -667,7 +664,8 @@ exports.hotelRoomBook = async (req, res) => {
                 roomCount: count,
                 checkInDate: startDate,
                 checkOutDate: endDate,
-                status: 1,            // 1-待支付
+                payStatus: 1,        // 1-待支付
+                verifyStatus: 1,     // 1-待核销（支付成功后待入住核销）
                 orderAmount: totalPrice,    // 统一字段名：原 amount → orderAmount
                 unitPrice,
                 totalPrice,
@@ -740,9 +738,9 @@ function getNightsToCheck(startDate, endDate) {
     return dates;
 }
 
-// 
+//  
 exports.getHotelOrderList = async (req, res) => {
-    let { orderNumber, userPhone, userCard, status, startDate, endDate, pageSize = 10, pageNumber = 1 } = req.query
+    let { orderNumber, userPhone, userCard, payStatus, startDate, endDate, pageSize = 10, pageNumber = 1 } = req.query
     pageSize = parseInt(pageSize)
     pageNumber = parseInt(pageNumber)
 
@@ -752,7 +750,7 @@ exports.getHotelOrderList = async (req, res) => {
         if (orderNumber) where.orderNumber = { [Op.like]: `%${orderNumber}%` }
         if (userPhone) where.userPhone = { [Op.like]: `%${userPhone}%` }
         if (userCard) where.userCard = { [Op.like]: `%${userCard}%` }
-        if (status) where.status = status
+        if (payStatus) where.payStatus = payStatus
         if (startDate || endDate) {
             where.createdAt = {
                 [Op.between]: [startDate, endDate],
@@ -867,8 +865,8 @@ exports.getHotelWriteOffList = async (req, res) => {
  * 核销酒店订单
  * 入参：verifyCode（核销码，下单时等于 orderNumber）或 orderNumber
  * 逻辑：
- *   - 仅 status=2（已支付/待核销）且 verifyStatus=1（待核销）可核销
- *   - 核销后：verifyStatus=2（已核销）、status=4（已完成）、记录核销时间
+ *   - 仅 payStatus=2（已支付/待核销）且 verifyStatus=1（待核销）可核销
+ *   - 核销后：verifyStatus=2（已核销）、payStatus=3（已完成）、记录核销时间
  */
 exports.hotelVerifyOrder = async (req, res) => {
     try {
@@ -885,12 +883,12 @@ exports.hotelVerifyOrder = async (req, res) => {
         if (!order) return res.json(util.fail('订单不存在，核销码无效'))
 
         // 2. 校验订单状态
-        if (order.status !== 2) {
-            const statusText = { 1: '待支付', 3: '已取消', 4: '已完成', 5: '已退款' }[order.status] || '当前'
+        if (order.payStatus !== 2) {
+            const statusText = { 1: '待支付', 3: '已完成', 4: '已退款', 5: '已取消' }[order.payStatus] || '当前'
             return res.json(util.fail(`订单状态不可核销（${statusText}）`))
         }
         if (order.verifyStatus === 2) return res.json(util.fail('订单已核销，请勿重复核销'))
-        if (order.verifyStatus === 3) return res.json(util.fail('订单已取消核销'))
+        if (order.verifyStatus === 3) return res.json(util.fail('订单已过期（超入住期未核销）'))
 
         // 3. 校验核销员（若传了 writeOffPhone，需是启用的酒店核销员）
         let writeOffRecord = null
@@ -901,8 +899,8 @@ exports.hotelVerifyOrder = async (req, res) => {
 
         // 4. 核销：更新订单
         await HotelOrder.update(
-            { verifyStatus: 2, status: 4, verifyTime: new Date() },
-            { where: { id: order.id } }
+            { verifyStatus: 2, payStatus: 3, verifyTime: new Date() },
+            { where: { id: order.id, payStatus: 2, verifyStatus: 1 } }
         )
 
         // 5. 更新核销员今日核销次数和最后核销时间
@@ -944,7 +942,7 @@ exports.hotelQueryByVerifyCode = async (req, res) => {
                 [Op.or]: [{ verifyCode: code }, { orderNumber: code }]
             },
             attributes: ['orderNumber', 'userName', 'userPhone', 'title', 'roomCount',
-                'checkInDate', 'checkOutDate', 'totalPrice', 'status', 'verifyStatus', 'verifyTime', 'paymentTime']
+                'checkInDate', 'checkOutDate', 'totalPrice', 'payStatus', 'verifyStatus', 'verifyTime', 'paymentTime']
         })
         if (!order) return res.json(util.fail('订单不存在，核销码无效'))
 
@@ -971,7 +969,7 @@ exports.hotelRefundPreview = async (req, res) => {
 
         const order = await HotelOrder.findOne({
             where: { orderNumber },
-            attributes: ['orderNumber', 'status', 'verifyStatus', 'totalPrice', 'checkInDate', 'title', 'userName']
+            attributes: ['orderNumber', 'payStatus', 'verifyStatus', 'totalPrice', 'checkInDate', 'title', 'userName']
         })
         if (!order) return res.json(util.fail('订单不存在'))
 
@@ -1004,8 +1002,8 @@ exports.hotelRefundPreview = async (req, res) => {
         const refundAmount = Math.round(order.totalPrice * refundRate * 100) / 100
         const deductionAmount = Math.round(order.totalPrice * deductionRate * 100) / 100
 
-        // 订单状态校验：只有已支付(2)或已完成(4)可退款
-        const statusRefundable = [2, 4].includes(order.status)
+        // 订单状态校验：只有已支付(2)或已完成(3)可退款
+        const statusRefundable = [2, 3].includes(order.payStatus)
 
         return res.json(util.success("查询成功", {
             orderNumber: order.orderNumber,
@@ -1057,14 +1055,14 @@ exports.getHotelRefundList = async (req, res) => {
 
 // 导出酒店订单列表EXCEL
 exports.exportHotelOrderList = async (req, res) => {
-    let { orderNumber, userPhone, userCard, status, startDate, endDate } = req.query
+    let { orderNumber, userPhone, userCard, payStatus, startDate, endDate } = req.query
 
     try {
         let where = {}
         if (orderNumber) where.orderNumber = { [Op.like]: `%${orderNumber}%` }
         if (userPhone) where.userPhone = { [Op.like]: `%${userPhone}%` }
         if (userCard) where.userCard = { [Op.like]: `%${userCard}%` }
-        if (status) where.status = status
+        if (payStatus) where.payStatus = payStatus
         if (startDate || endDate) {
             where.createdAt = {
                 [Op.between]: [startDate, endDate],
@@ -1087,7 +1085,7 @@ exports.exportHotelOrderList = async (req, res) => {
             roomCount: item.roomCount,
             checkInDate: util.formDate(item.checkInDate),
             checkOutDate: util.formDate(item.checkOutDate),
-            status: item.status,
+            payStatus: item.payStatus,
             amount: item.orderAmount,       // 统一字段名：原 item.amount → item.orderAmount
             refundAmount: item.refundAmount,
         }))

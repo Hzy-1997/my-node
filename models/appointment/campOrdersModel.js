@@ -97,19 +97,26 @@ const campOrders = sequelize.define("campOrders", {
         defaultValue: 1,
         comment: '支付方式 1:微信支付 2:支付宝 3:现金 4:银行转账',
     },
-    // 支付状态
+    // 订单状态（统一五态，订单生命周期由 payStatus 承载，原 orderStatus 字段已废弃删除）
+    // 1:待支付 → 支付回调 → 2:已支付 → 结营后定时任务 → 3:已完成；
+    // 管理员退款 → 4:已退款；超时未支付 → 5:已取消（记录 cancelReason）
     payStatus: {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 1,
-        comment: '支付状态 1:待支付 2:已支付 3:已退款',
+        comment: '订单状态 1:待支付 2:已支付 3:已完成 4:已退款 5:已取消',
     },
-    // 订单状态
-    orderStatus: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 1,
-        comment: '订单状态 1:待确认 2:已确认 3:已参加 4:已取消 5:已完成',
+    // 支付宝交易号
+    alipayTradeNo: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        comment: '支付宝交易号',
+    },
+    // 支付时间
+    paymentTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '支付时间',
     },
     // 备注
     remark: {

@@ -83,21 +83,27 @@ const Order = sequelize.define("Order", {
         type: DataTypes.STRING,
         allowNull: false
     },
-    // 订单状态
-    orderStatus: {
+    // 订单状态（统一五态：1-待支付 2-已支付 3-已完成 4-已退款 5-已取消）
+    payStatus: {
         type: DataTypes.INTEGER,
         defaultValue: 1,
         validate: {
-            isIn: [[1, 2, 3, 4, 5]], // 订单状态：1-待支付，2-待核销，3-已取消，4-已完成，5-已退款
+            isIn: [[1, 2, 3, 4, 5]], // 1-待支付，2-已支付，3-已完成，4-已退款，5-已取消
         },
     },
-    // 核销状态
+    // 核销状态（1-待核销，2-已完成(已核销)，3-已过期(超使用期未核销)）
     verifyStatus: {
         type: DataTypes.INTEGER,
         defaultValue: 1,
         validate: {
-            isIn: [[1, 2, 3]], // 核销状态：1-未核销，2-已核销，3-已取消
+            isIn: [[1, 2, 3]], // 核销状态：1-待核销，2-已完成，3-已过期
         },
+    },
+    // 取消原因（payStatus=5 已取消时记录，如"超时未支付自动取消"）
+    cancelReason: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        comment: '取消原因'
     },
     // 订单金额
     orderAmount: {

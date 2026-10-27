@@ -7,26 +7,29 @@
  * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
  */
 // config/exportFields.js
+// 主状态（payStatus 五态，所有订单业务统一）
 const ORDER_STATUS_MAP = {
     1: '待支付',
-    2: '待核销',
-    3: '已取消',
-    4: '已完成',
-    5: '已退款'
+    2: '已支付',
+    3: '已完成',
+    4: '已退款',
+    5: '已取消'
 };
 
+// 履约状态（verifyStatus 三态：票务/套餐/酒店通用）
 const VERIFY_STATUS_MAP = {
-    1: '未核销',
+    1: '待核销',
     2: '已核销',
-    3: '已取消'
+    3: '已过期'
 };
 
+// 酒店主状态与票务一致（payStatus 五态）
 const HOTEL_STATUS_MAP = {
     1: '待支付',
-    2: '待核销',
-    3: '已取消',
-    4: '已完成',
-    5: '已退款'
+    2: '已支付',
+    3: '已完成',
+    4: '已退款',
+    5: '已取消'
 };
 
 // 门票订单导出字段配置
@@ -39,7 +42,7 @@ const ticketOrderFields = [
     { key: 'userIdCard', label: '身份证', width: 20, decrypt: true },
     { key: 'buyNum', label: '购买数量', width: 12 },
     {
-        key: 'orderStatus',
+        key: 'payStatus',
         label: '订单状态',
         width: 12,
         enum: ORDER_STATUS_MAP
@@ -67,7 +70,7 @@ const hotelOrderFields = [
     { key: 'checkInDate', label: '入住日期', width: 15, date: true },
     { key: 'checkOutDate', label: '离店日期', width: 15, date: true },
     {
-        key: 'status',
+        key: 'payStatus',
         label: '状态',
         width: 12,
         enum: HOTEL_STATUS_MAP

@@ -454,8 +454,7 @@ exports.campsiteAppointment = async (req, res) => {
                 discount: 0,
                 orderAmount: totalAmount,
                 payMethod: 1,
-                payStatus: 1, // 待支付
-                orderStatus: 1, // 待确认
+                payStatus: 1, // 待支付（统一五态，订单生命周期由 payStatus 承载）
                 cancelReason: null,
                 remark,
             }, { transaction: t });

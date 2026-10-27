@@ -92,11 +92,18 @@ const HotelOrder = sequelize.define('HotelOrder', {
         allowNull: false,
         comment: '离店时间'
     },
-    // 订单状态
-    status: {
+    // 订单状态（统一五态：1-待支付 2-已支付 3-已完成 4-已退款 5-已取消）
+    payStatus: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        comment: "订单状态"
+        defaultValue: 1,
+        comment: '订单状态：1-待支付 2-已支付 3-已完成 4-已退款 5-已取消'
+    },
+    // 取消原因（payStatus=5 已取消时记录）
+    cancelReason: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        comment: '取消原因'
     },
     // 订单金额
     orderAmount: {
@@ -126,12 +133,12 @@ const HotelOrder = sequelize.define('HotelOrder', {
         allowNull: true,
         comment: '支付时间'
     },
-    // 核销状态：1-待核销,2-已核销,3-已取消
+    // 核销状态：1-待核销,2-已完成(已核销),3-已过期
     verifyStatus: {
         type: DataTypes.INTEGER,
         allowNull: true,
         defaultValue: 1,
-        comment: '核销状态：1-待核销,2-已核销,3-已取消'
+        comment: '核销状态：1-待核销,2-已完成,3-已过期'
     },
     unitPrice: {
         type: DataTypes.DECIMAL(10, 2),
@@ -179,8 +186,8 @@ const HotelOrder = sequelize.define('HotelOrder', {
             fields: ['userPhone']
         },
         {
-            name: "idx_status",
-            fields: ['status'],
+            name: "idx_payStatus",
+            fields: ['payStatus'],
         }
     ]
 })

@@ -103,7 +103,7 @@ const ScenicBusOrder = sequelize.define('scenicBusOrder', {
         type: DataTypes.TINYINT,
         allowNull: false,
         defaultValue: 1,
-        comment: '支付状态 1:待支付 2:已支付 3:已退款',
+        comment: '订单状态（统一五态）1:待支付 2:已支付 3:已完成 4:已退款 5:已取消',
     },
     transactionNumber: {
         type: DataTypes.STRING,
@@ -123,12 +123,9 @@ const ScenicBusOrder = sequelize.define('scenicBusOrder', {
     // 全部票核销完成 → 订单流转为已完成，票的退款金额累计到订单 refundAmount。
 
     // ========== 7. 状态与备注 ==========
-    orderStatus: {
-        type: DataTypes.TINYINT,
-        allowNull: false,
-        defaultValue: 1,
-        comment: '订单状态 1:待支付 2:待使用 3:已完成 4:已取消 5:已退款',
-    },
+    // 订单生命周期由 payStatus 统一承载（原 orderStatus 字段已废弃删除）：
+    // 1:待支付 → 支付回调 → 2:已支付 → 票全部核销 → 3:已完成；
+    // 全部票退票 → 4:已退款；超时未支付 → 5:已取消（记录 cancelReason）。
     cancelReason: {
         type: DataTypes.STRING(255),
         allowNull: true,

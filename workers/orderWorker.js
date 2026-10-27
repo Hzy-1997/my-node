@@ -7,10 +7,9 @@
  */
 const queueService = require('../services/queueService');
 const redisService = require('../services/redisService');
-const { Op } = require('sequelize');
 const comboPurchaseService = require('../services/comboPurchaseService');
 const hotelPurchaseService = require('../services/hotelPurchaseService');
-const { Order, Ticket, PackageOrderDetail, PackageItem, RoomPackage, RoomInventory, PackageDatePrice, HotelOrder, ParkingReservation } = require('../models/Summary');
+const { Order, Ticket, PackageOrderDetail, PackageItem, RoomPackage, RoomInventory, PackageDatePrice, HotelOrder, ParkingReservation, campOrders } = require('../models/Summary');
 const { setupAssociations } = require('../models/associations');
 const { generateNights } = require('../utils/dateHelper');
 
@@ -103,7 +102,7 @@ async function processPackageOrder(orderData) {
         userName: orderInfo.userName || '',
         userPhone: orderInfo.userPhone || '',
         buyNum: orderInfo.buyNum,
-        orderStatus: orderInfo.orderStatus || 1,
+        payStatus: orderInfo.payStatus || 1, // 1-待支付（统一五态）
         orderAmount: parseFloat(orderInfo.totalAmount || 0),
         refundAmount: 0,
         packageId: orderInfo.productPackageId,
@@ -343,6 +342,7 @@ async function processPaymentCallback(paymentData) {
         let isPackageOrder = false;
         let isHotelOrder = false;
         let isParkingOrder = false;
+        let isCampOrder = false;
         if (!order) {
             order = await PackageOrderDetail.findOne({
                 where: { orderNumber: out_trade_no }
@@ -362,22 +362,27 @@ async function processPaymentCallback(paymentData) {
             });
             isParkingOrder = !!order;
         }
+        // 夏令营订单
+        if (!order) {
+            order = await campOrders.findOne({
+                where: { orderNumber: out_trade_no }
+            });
+            isCampOrder = !!order;
+        }
 
         if (!order) {
             throw new Error(`订单不存在: ${out_trade_no}`);
         }
 
         if (trade_status === 'TRADE_SUCCESS' || trade_status === 'TRADE_FINISHED') {
-            // 停车预约用 payStatus===1 判断未支付，其他业务用 orderStatus/status
-            const currentStatus = isParkingOrder
-                ? order.payStatus
-                : isHotelOrder ? order.status : order.orderStatus;
+            // 统一五态后所有订单表都用 payStatus 判断未支付
+            const currentStatus = order.payStatus;
             if (currentStatus === 1) {
                 if (isParkingOrder) {
+                    // 停车业务：支付成功即视为核销完成 → 3已完成（跳过 2已支付）
                     // 条件更新保证幂等：已支付的不重复处理
                     const [updated] = await ParkingReservation.update({
-                        payStatus: 2, // 已支付
-                        status: 1, // 已确认
+                        payStatus: 3, // 已完成（下单即核销）
                         tradeNo: notifyData.trade_no,
                         paymentTime: notifyData.gmt_payment,
                     }, { where: { orderNumber: out_trade_no, payStatus: 1 } });
@@ -386,10 +391,21 @@ async function processPaymentCallback(paymentData) {
                         await redisService.delFun(`parking:pay:expire:${out_trade_no}`).catch(() => { });
                         console.log(`[PaymentWorker] 停车预约支付成功: ${out_trade_no}, 支付宝交易号: ${notifyData.trade_no}, 支付时间: ${notifyData.gmt_payment}`);
                     }
+                } else if (isCampOrder) {
+                    // 夏令营订单：条件更新保证幂等
+                    const [updated] = await campOrders.update({
+                        payStatus: 2, // 已支付
+                        alipayTradeNo: notifyData.trade_no,
+                        paymentTime: notifyData.gmt_payment,
+                    }, { where: { orderNumber: out_trade_no, payStatus: 1 } });
+                    if (updated > 0) {
+                        await redisService.delFun(`campsite:pay:expire:${out_trade_no}`).catch(() => { });
+                        console.log(`[PaymentWorker] 夏令营订单支付成功: ${out_trade_no}, 支付宝交易号: ${notifyData.trade_no}, 支付时间: ${notifyData.gmt_payment}`);
+                    }
                 } else if (isHotelOrder) {
                     await HotelOrder.update({
-                        status: 2,
-                        verifyStatus: 1,
+                        payStatus: 2, // 已支付
+                        verifyStatus: 1, // 待核销
                         alipayTradeNo: notifyData.trade_no,
                         paymentTime: notifyData.gmt_payment,
                     }, { where: { orderNumber: out_trade_no } });
@@ -399,7 +415,7 @@ async function processPaymentCallback(paymentData) {
                     console.log(`[PaymentWorker] 酒店订单支付成功: ${out_trade_no}, 支付时间: ${notifyData.gmt_payment}`);
                 } else if (isPackageOrder) {
                     await PackageOrderDetail.update({
-                        orderStatus: 2,
+                        payStatus: 2, // 已支付
                         orderAmount: total_amount,
                         alipayTradeNo: notifyData.trade_no,
                         paymentTime: notifyData.gmt_payment,
@@ -436,7 +452,7 @@ async function processPaymentCallback(paymentData) {
                     }
                 } else {
                     await Order.update({
-                        orderStatus: 2,
+                        payStatus: 2, // 已支付
                         orderAmount: total_amount,
                         alipayTradeNo: notifyData.trade_no,
                         paymentTime: notifyData.gmt_payment,
@@ -450,16 +466,27 @@ async function processPaymentCallback(paymentData) {
             // 停车预约：未支付交易关闭 → 取消预约单，释放车位时段
             if (isParkingOrder && order.payStatus === 1) {
                 const [updated] = await ParkingReservation.update({
-                    status: 2,
+                    payStatus: 5, // 已取消
                     cancelReason: '支付宝交易关闭',
-                }, { where: { orderNumber: out_trade_no, payStatus: 1, status: { [Op.ne]: 2 } } });
+                }, { where: { orderNumber: out_trade_no, payStatus: 1 } });
                 if (updated > 0) {
                     await redisService.delFun(`parking:pay:expire:${out_trade_no}`).catch(() => { });
                     console.log(`[PaymentWorker] 停车预约交易关闭，已取消并释放车位时段: ${out_trade_no}`);
                 }
                 return { success: true };
             }
-            const currentStatus = isHotelOrder ? order.status : order.orderStatus;
+            // 夏令营：未支付交易关闭 → 已取消
+            if (isCampOrder && order.payStatus === 1) {
+                const [updated] = await campOrders.update({
+                    payStatus: 5, // 已取消
+                    cancelReason: '支付宝交易关闭',
+                }, { where: { orderNumber: out_trade_no, payStatus: 1 } });
+                if (updated > 0) {
+                    console.log(`[PaymentWorker] 夏令营订单交易关闭，已取消: ${out_trade_no}`);
+                }
+                return { success: true };
+            }
+            const currentStatus = order.payStatus;
             if (currentStatus === 1) {
                 if (isHotelOrder) {
                     const nights = generateNights(order.checkInDate, order.checkOutDate);
@@ -473,7 +500,7 @@ async function processPaymentCallback(paymentData) {
                     });
                     // 同步回滚 DB 房型库存
                     await syncHotelStockToDB(order.roomTypeId, nights, order.roomCount, false);
-                    await HotelOrder.update({ status: 5 }, { where: { orderNumber: out_trade_no } });
+                    await HotelOrder.update({ payStatus: 5, cancelReason: '支付宝交易关闭' }, { where: { orderNumber: out_trade_no } });
                     console.log(`[PaymentWorker] 酒店订单已关闭，库存已恢复: ${out_trade_no}`);
                 } else if (isPackageOrder) {
                     const cancelData = await redisService.getFun(`cancel:data:${out_trade_no}`, false);
@@ -490,8 +517,8 @@ async function processPaymentCallback(paymentData) {
                     }
 
                     await PackageOrderDetail.update({
-                        orderStatus: 3,
-                        verifyStatus: 3,
+                        payStatus: 5, // 已取消
+                        cancelReason: '支付宝交易关闭',
                     }, { where: { orderNumber: out_trade_no } });
                 } else {
                     await redisService.incrFun(
@@ -509,8 +536,8 @@ async function processPaymentCallback(paymentData) {
                     console.log(`[PaymentWorker] 购买记录已删除: ${orderPurchaseKey}`);
 
                     await Order.update({
-                        orderStatus: 5,
-                        verifyStatus: 3,
+                        payStatus: 5, // 已取消（未支付关闭，非退款）
+                        cancelReason: '支付宝交易关闭',
                     }, { where: { orderNumber: out_trade_no } });
                 }
 
@@ -571,7 +598,7 @@ async function processOrderCancel(cancelData) {
             return { success: true, message: '订单不存在' };
         }
 
-        const currentStatus = isHotelOrder ? order.status : order.orderStatus;
+        const currentStatus = order.payStatus;
         if (currentStatus !== 1) {
             console.log(`[CancelWorker] 订单${orderNo}状态为${currentStatus}，无需取消`);
             return { success: true, message: '订单已处理，无需取消' };
@@ -590,7 +617,7 @@ async function processOrderCancel(cancelData) {
             });
             // 同步回滚 DB 房型库存
             await syncHotelStockToDB(order.roomTypeId, cancelNights, order.roomCount, false);
-            await HotelOrder.update({ status: 3 }, { where: { orderNumber: orderNo } });
+            await HotelOrder.update({ payStatus: 5, cancelReason: reason || '超时未支付自动取消' }, { where: { orderNumber: orderNo } });
         } else if (isPackageOrder) {
             console.log(`[CancelWorker] 套餐订单取消，恢复库存: packageItemId=${packageItemId}, roomTypeId=${roomTypeId}`);
             for (const date of dateRange) {
@@ -606,8 +633,8 @@ async function processOrderCancel(cancelData) {
             await syncPackageStockToDB(packageItemId, roomTypeId, dateRange, count, false);
 
             await PackageOrderDetail.update({
-                orderStatus: 3,
-                verifyStatus: 3,
+                payStatus: 5, // 已取消
+                cancelReason: reason || '超时未支付自动取消',
             }, { where: { orderNumber: orderNo } });
         } else {
             await redisService.incrFun(`ticket:stock:${goodsId}`, count);
@@ -625,10 +652,8 @@ async function processOrderCancel(cancelData) {
             console.log(`[CancelWorker] 购买记录已删除: ${orderPurchaseKey}`);
 
             await Order.update({
-                orderStatus: 3,
-                verifyStatus: 3,
-                cancelReason: reason,
-                cancelTime: new Date()
+                payStatus: 5, // 已取消
+                cancelReason: reason || '超时未支付自动取消',
             }, { where: { orderNumber: orderNo } });
         }
 

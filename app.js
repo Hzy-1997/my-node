@@ -124,10 +124,12 @@ function initializeCronJobs() {
     }
   });
 
-  // 全业务订单超时未支付自动取消（每30秒扫描并释放库存）
-  // require('./tasks/orderExpireTask').start();
+  // 全业务订单状态定时任务（每30秒扫描）：
+  //   一、超时未支付自动取消（payStatus=5 + 回补库存，支付宝不回调时的 DB 对账兜底）
+  //   二、已支付订单超使用期未核销 → verifyStatus=3 已过期；夏令营结营 → payStatus 2→3
+  require('./tasks/orderExpireTask').start();
 
-  console.log('[Cron] 定时任务已初始化，每天 00:30 执行库存重置');
+  console.log('[Cron] 定时任务已初始化，每天 00:30 执行库存重置，每30秒扫描订单状态');
 }
 
 // 导出初始化函数供www文件使用

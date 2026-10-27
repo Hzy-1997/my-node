@@ -279,11 +279,13 @@ exports.parkingSpots = async (req, res) => {
             return res.json(util.fail('预约时长必须为1小时'));
         }
 
-        // 查询该时段内被占用的车位（未取消且未作废的预约）
+        // 查询该时段内被占用的车位（非已退款/已取消的预约即占位：
+        // 待支付1占位防超卖、已完成3=已支付订单在其时段内占位；
+        // 时段已过的历史订单不会与新预约发生时间重叠）
         const overlaps = await ParkingReservation.findAll({
             where: {
                 parkingId: parkingId,
-                status: { [Op.notIn]: [2, 4] },
+                payStatus: { [Op.notIn]: [4, 5] },
                 startTime: { [Op.lt]: end },
                 endTime: { [Op.gt]: start },
             },
@@ -323,9 +325,9 @@ exports.parkingSpots = async (req, res) => {
  * @param {string} endTime - 结束时间（与开始时间相差整1小时）
  * 
  * 车位可用性判断：所选时段 [start, end) 内不存在
- * 该车位的未取消/未作废预约单（status 不为 2/4 且时间区间有交集）
+ * 该车位的非已退款/非已取消预约单（payStatus 不为 4/5 且时间区间有交集）
  * 预约时长固定为1小时（最短最长均为1小时）；
- * 已支付但时段结束未使用的订单由定时任务自动作废（status=4，订单终结不可再用）
+ * 已支付订单支付成功即为 3已完成（下单即核销），时段结束后自然释放时段
  * 不再扣减 Parking.availableCount（该字段仅作展示）
  */
 
@@ -398,11 +400,11 @@ exports.parkingAppointment = async (req, res) => {
                 return res.json(util.fail("该车位已停用维护"));
             }
 
-            // 时段重叠检查：该车位的未取消/未作废预约与 [start, end) 有交集则不可预约
+            // 时段重叠检查：该车位的非已退款/非已取消预约与 [start, end) 有交集则不可预约
             const overlap = await ParkingReservation.findOne({
                 where: {
                     spotId: spotId,
-                    status: { [Op.notIn]: [2, 4] },
+                    payStatus: { [Op.notIn]: [4, 5] },
                     startTime: { [Op.lt]: end },
                     endTime: { [Op.gt]: start },
                 },
@@ -432,8 +434,7 @@ exports.parkingAppointment = async (req, res) => {
                     endTime: end,
                     orderAmount: parking.price,
                     writeOffCode: orderNo,
-                    status: 0,
-                    payStatus: 1,
+                    payStatus: 1, // 待支付（统一五态，原 status 预约状态字段已删除）
                 },
                 { transaction: t },
             );

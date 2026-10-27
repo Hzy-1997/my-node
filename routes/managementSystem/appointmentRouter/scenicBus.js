@@ -9,8 +9,7 @@ const redisService = require("../../../services/redisService");
 const { ScenicBus, ScenicBusOrder, ScenicBusOrderTicket } = require("../../../models/Summary")
 
 // 状态常量（与模型 comment 保持一致）
-// 订单 orderStatus: 1待支付 2待使用 3已完成 4已取消 5已退款
-// 支付 payStatus:   1待支付 2已支付 3已退款
+// 订单 payStatus（统一五态）: 1待支付 2已支付 3已完成 4已退款 5已取消（原 orderStatus 字段已删除）
 // 车票 verifyStatus: 1待乘车 2已核销 3已过期 4已退票
 
 /**
@@ -40,7 +39,7 @@ async function generateUniqueVerifyCodes(count, t) {
 
 /**
  * 统计商品已占库存的票数（已退票不占库存）
- * 口径：有效订单（1待支付/2待使用/3已完成）内，非"已退票"状态的车票数
+ * 口径：有效订单（1待支付/2已支付/3已完成）内，非"已退票"状态的车票数
  * @param {number} scenicBusId - 商品ID
  * @param {Object} t - 事务实例
  * @returns {Promise<number>} 已占库存票数
@@ -53,7 +52,7 @@ async function countSoldTickets(scenicBusId, t) {
             attributes: [],
             where: {
                 scenicBusId: scenicBusId,
-                orderStatus: { [Op.in]: [1, 2, 3] }
+                payStatus: { [Op.in]: [1, 2, 3] }
             }
         }],
         where: { verifyStatus: { [Op.ne]: 4 } },
@@ -62,13 +61,13 @@ async function countSoldTickets(scenicBusId, t) {
 }
 
 /**
- * 票明细变更后同步订单状态（核销/退票后调用，需在事务内）
- * 规则：
- *  - 仍有"待乘车"票 → 订单保持 2待使用
- *  - 无"待乘车"票且全部票已退 → 订单 5已退款、payStatus 3
- *  - 无"待乘车"票且存在已核销票 → 订单 3已完成
+ * 票明细变更后同步订单状态（核销/退票/过期后调用，可不在事务内）
+ * 规则（统一五态）：
+ *  - 仍有"待乘车"票 → 订单保持 2已支付
+ *  - 无"待乘车"票且全部票已退 → 订单 4已退款
+ *  - 无"待乘车"票且存在已核销/已过期票 → 订单 3已完成
  * @param {Object} order - 订单实例
- * @param {Object} t - 事务实例
+ * @param {Object} t - 事务实例（可选）
  */
 async function syncOrderStatusAfterTicketChange(order, t) {
     const waitingCount = await ScenicBusOrderTicket.count({
@@ -85,13 +84,13 @@ async function syncOrderStatusAfterTicketChange(order, t) {
     if (refundedCount >= order.quantity) {
         // 全部票已退 → 已退款
         await ScenicBusOrder.update(
-            { orderStatus: 5, payStatus: 3 },
+            { payStatus: 4 },
             { where: { id: order.id }, transaction: t }
         );
     } else {
         // 部分核销部分退，无剩余待乘车 → 已完成
         await ScenicBusOrder.update(
-            { orderStatus: 3 },
+            { payStatus: 3 },
             { where: { id: order.id }, transaction: t }
         );
     }
@@ -258,10 +257,9 @@ exports.scenicBusAppointment = async (req, res) => {
                 totalAmount,
                 orderAmount: totalAmount,
                 refundAmount: 0,
-                payStatus: 1,      // 待支付
+                payStatus: 1,      // 待支付（统一五态）
                 transactionNumber: null,
                 paymentTime: null,
-                orderStatus: 1,    // 待支付
                 cancelReason: null,
             }, { transaction: t });
 
@@ -310,7 +308,7 @@ exports.scenicBusAppointment = async (req, res) => {
 // 订单列表
 exports.scenicBusOrderList = async (req, res) => {
     try {
-        let { page = 1, pageSize = 10, orderNumber, userId, scenicBusId, orderStatus, rideDate } = req.query
+        let { page = 1, pageSize = 10, orderNumber, userId, scenicBusId, payStatus, rideDate } = req.query
         page = parseInt(page);
         pageSize = parseInt(pageSize);
 
@@ -318,7 +316,7 @@ exports.scenicBusOrderList = async (req, res) => {
         if (orderNumber) where.orderNumber = { [Op.like]: `%${orderNumber}%` }
         if (userId) where.userId = userId
         if (scenicBusId) where.scenicBusId = scenicBusId
-        if (orderStatus) where.orderStatus = orderStatus
+        if (payStatus) where.payStatus = payStatus
         if (rideDate) where.rideDate = rideDate
 
         const { count, rows } = await ScenicBusOrder.findAndCountAll({
@@ -522,10 +520,10 @@ exports.scenicBusRefund = async (req, res) => {
 /**
  * @description: 景区公交订单支付（接口占位，暂不实现）
  * 实现时的处理流程：
- *  1. 校验订单存在且为"待支付"状态，且未超过10分钟支付时限
+ *  1. 校验订单存在且为"待支付"状态（payStatus=1），且未超过10分钟支付时限
  *  2. 按金额调用微信/支付宝统一下单，返回前端拉起支付所需参数
- *  3. 支付回调中更新订单：payStatus=2 已支付、orderStatus=2 待使用、
- *     paymentTime、transactionNumber（第三方交易号）
+ *  3. 支付回调中更新订单：payStatus=2 已支付、paymentTime、
+ *     transactionNumber（第三方交易号）
  *  4. 支付成功后车票方可核销
  * @param {string} orderNumber - 订单编号
  */
@@ -533,3 +531,6 @@ exports.scenicBusPay = async (req, res) => {
     // TODO: 待接入微信/支付宝支付渠道
     return res.json(util.fail("支付功能开发中"))
 }
+
+// 导出供定时任务复用（tasks/orderExpireTask.js 车票过期后同步订单状态）
+exports.syncOrderStatusAfterTicketChange = syncOrderStatusAfterTicketChange
