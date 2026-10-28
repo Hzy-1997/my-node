@@ -751,7 +751,22 @@ exports.uploadWxImg = async (req, res) => {
 // 图片目录白名单判断
 function allowedCategory(category) {
     // 分类白名单（和 aliyun.js 保持一份，或抽成公共常量）
-    const ALLOWED_CATEGORIES = ['avatar', 'ticket', 'hotel', 'package', 'parking', 'camp', 'common'];
+    const ALLOWED_CATEGORIES = [
+        'avatar', // 用户头像
+        'ticket', // 票务图片
+        'hotel', // 酒店图片
+        'package', // 套餐图片
+        'parking', // 停车图片
+        'camp',  // 露营图片
+        'activity', // 活动图片
+        'strategy', // 策略图片
+        'sport',  // 运动图片
+        'relax', // 休闲图片
+        'food', // 餐饮图片
+        'shopping', // 购物图片
+        "bus", // 观光车图片
+        'common'  // 通用图片
+    ];
     if (!ALLOWED_CATEGORIES.includes(category)) {
         return res.json(util.fail('非法的上传分类'));
     }
