@@ -79,6 +79,11 @@ const { ScenicBus } = require("./appointment/scenicBusModel")
 const { ScenicBusOrder } = require("./appointment/scenicBusOrderModel")
 const { ScenicBusOrderTicket } = require("./appointment/scenicBusOrderTicketModel")
 
+// 游客服务--意见与反馈
+const { touristServices } = require("./serviceModule/touristServices")
+const { opinionsFeedback } = require("./serviceModule/opinionsFeedback")
+
+
 
 
 module.exports = {
@@ -96,5 +101,6 @@ module.exports = {
     RefundOrder,
     ProductPackage, PackageItem, PackagePriceRule, PackageDatePrice, PackageOrderDetail,
     campOrders, campOrderParticipants, CampSession, Campsite, Parking, ParkingReservation, ParkingSpot, TicketType,
-    ScenicBus, ScenicBusOrder, ScenicBusOrderTicket
+    ScenicBus, ScenicBusOrder, ScenicBusOrderTicket,
+    touristServices, opinionsFeedback
 };
