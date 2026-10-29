@@ -335,7 +335,7 @@ async function markExpiredVerifyStatus() {
         const expiredBusTickets = await ScenicBusOrderTicket.findAll({
             include: [{
                 model: ScenicBusOrder,
-                as: 'ScenicBusOrder', // 👈 注意这里！填你模型关联时定义的 as 别名（如果没有别名可以删掉这行）
+                as: 'order', // 👈 注意这里！填你模型关联时定义的 as 别名（如果没有别名可以删掉这行）
                 where: { rideDate: { [Op.lt]: todayStr } }, // 👈 条件写在这里（主表）
                 attributes: [] // 不需要返回主表的字段
             }],
