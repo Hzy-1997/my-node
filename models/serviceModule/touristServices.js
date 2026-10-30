@@ -1,3 +1,11 @@
+/*
+ * @描述: 
+ * @版本: 
+ * @作者: 
+ * @日期: ${year}-${month}-${day}
+ * @最后编辑者: sueRimn
+ * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
+ */
 const { Sequelize, DataTypes } = require('sequelize');
 const { sequelize } = require('../../mysql/index');
 
@@ -36,7 +44,7 @@ const touristServices = sequelize.define("touristServices", {
     status: {
         type: DataTypes.INTEGER,
         defaultValue: 1,
-        comment: "状态 (1: 正常, 2: 已下架",
+        comment: "状态 (1: 正常, 2: 下架)",
     },
     sortOrder: {
         type: DataTypes.INTEGER,

@@ -4,14 +4,13 @@
  * @Author: sueRimn
  * @Date: 2025-07-17 15:47:46
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2026-08-18 09:14:53
+ * @LastEditTime: 2026-10-30 14:53:42
  */
 var express = require('express');
 const { checkToken } = require("../utils/jwt.js")
 var router = express.Router();
 
 // ----------------------------               管理后台
-
 // 登录 
 router.use('/login', require('./managementSystem/loginRouter/index.js'))
 // 用户
@@ -34,9 +33,8 @@ router.use("/hotel", require("./managementSystem/hotelRouter/index.js"))
 router.use("/package", require("./managementSystem/comboRouter/index.js"))
 // 预约模块
 router.use("/appointment", require("./managementSystem/appointmentRouter/index.js"))
-
-
-
+// 游客服务与意见建议
+router.use("/serviceSuggestions", require("./managementSystem/serviceRouter/index.js"))
 
 
 

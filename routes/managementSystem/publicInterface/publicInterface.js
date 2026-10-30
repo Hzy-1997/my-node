@@ -765,11 +765,10 @@ function allowedCategory(category) {
         'food', // 餐饮图片
         'shopping', // 购物图片
         "bus", // 观光车图片
+        'service', // 游客服务图片
         'common'  // 通用图片
     ];
-    if (!ALLOWED_CATEGORIES.includes(category)) {
-        return res.json(util.fail('非法的上传分类'));
-    }
+    return ALLOWED_CATEGORIES.includes(category);
 }
 
 // 点击删除图片
