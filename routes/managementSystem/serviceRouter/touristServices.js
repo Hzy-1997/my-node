@@ -60,11 +60,14 @@ exports.touristServicesOperation = async (req, res) => {
 exports.touristServicesList = async (req, res) => {
 
     try {
-        let { title, status, page = 1, pageSize = 10 } = req.query
+        let { title, status, page = 1, pageSize = 10, serviceType } = req.query
 
         let where = {}
         if (title) where.title = { [Op.like]: `%${title}%` }
         if (status) where.status = parseInt(status)
+        if (serviceType) where.serviceType = parseInt(serviceType)
+
+
         page = parseInt(page)
         pageSize = parseInt(pageSize)
         let { rows, count } = await touristServices.findAndCountAll({

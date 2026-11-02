@@ -16,6 +16,13 @@ const touristServices = sequelize.define("touristServices", {
         autoIncrement: true,
         comment: "主键ID",
     },
+    //服务分类
+    serviceType: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        comment: "服务分类",
+    },
     title: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -40,6 +47,24 @@ const touristServices = sequelize.define("touristServices", {
         type: DataTypes.STRING,
         allowNull: false,
         comment: "位置",
+    },
+
+    chargeStandard: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: "收费标准",
+    },
+    // 注意事项
+    notice: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: "注意事项",
+    },
+    // 设施介绍
+    facilityIntroduction: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: "设施介绍",
     },
     status: {
         type: DataTypes.INTEGER,

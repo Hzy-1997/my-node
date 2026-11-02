@@ -687,6 +687,7 @@ exports.refund = async (req, res) => {
 exports.uploadImg = async (req, res) => {
 
     const category = req.query.category || 'common'; // 默认为common
+    console.log("图片上传分类后端:", category);
     if (!allowedCategory(category)) {
         return res.json(util.fail('非法的上传分类'));
     }
@@ -717,8 +718,8 @@ exports.uploadImg = async (req, res) => {
 
 // 小程序图片上传（上传至阿里云 OSS，返回完整可访问 URL）
 exports.uploadWxImg = async (req, res) => {
-
     const category = req.query.category || 'common'; // 默认为common
+    console.log("图片上传分类:", category);
     if (!allowedCategory(category)) {
         return res.json(util.fail('非法的上传分类'));
     }

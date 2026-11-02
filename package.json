@@ -41,6 +41,7 @@
     "multer-aliyun-oss": "^2.1.3",
     "mysql2": "^3.14.2",
     "node-cron": "^4.2.1",
+    "openai": "^7.47.0",
     "pdfkit": "^0.19.1",
     "redis": "^5.9.0",
     "sequelize": "^6.37.7",

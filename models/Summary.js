@@ -82,6 +82,13 @@ const { ScenicBusOrderTicket } = require("./appointment/scenicBusOrderTicketMode
 // 游客服务--意见与反馈
 const { touristServices } = require("./serviceModule/touristServices")
 const { opinionsFeedback } = require("./serviceModule/opinionsFeedback")
+// 字典类型
+const { DictCategory, DictData } = require("./dictType/dictType")
+// 智能问答表
+const { QuestionsAnswers } = require("./questionsAnswersModel/questionsAnswers")
+
+
+
 
 
 
@@ -102,5 +109,7 @@ module.exports = {
     ProductPackage, PackageItem, PackagePriceRule, PackageDatePrice, PackageOrderDetail,
     campOrders, campOrderParticipants, CampSession, Campsite, Parking, ParkingReservation, ParkingSpot, TicketType,
     ScenicBus, ScenicBusOrder, ScenicBusOrderTicket,
-    touristServices, opinionsFeedback
+    touristServices, opinionsFeedback,
+    DictCategory, DictData,
+    QuestionsAnswers
 };

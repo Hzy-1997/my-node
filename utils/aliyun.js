@@ -104,13 +104,21 @@ const config = {
 
 // 合法分类白名单，防止路径穿越
 const ALLOWED_CATEGORIES = [
-    'avatar',  // 头像
-    'ticket',  // 票务
-    'hotel',   // 酒店
-    'package', // 套餐
-    'parking', // 停车场
-    'camp',    // 露营
-    'common'   // 公共
+    'avatar', // 用户头像
+    'ticket', // 票务图片
+    'hotel', // 酒店图片
+    'package', // 套餐图片
+    'parking', // 停车图片
+    'camp',  // 露营图片
+    'activity', // 活动图片
+    'strategy', // 策略图片
+    'sport',  // 运动图片
+    'relax', // 休闲图片
+    'food', // 餐饮图片
+    'shopping', // 购物图片
+    "bus", // 观光车图片
+    'service', // 游客服务图片
+    'common'  // 通用图片
 ];
 
 // 创建一个 OSS 客户端
@@ -128,7 +136,7 @@ function generateDatePath() {
 // multer 配置信息
 const upload = multer({
     storage: MAO({
-        config: config,   
+        config: config,
         // 修改上传目录为日期目录，自动创建按日期的目录结构
         destination: (req, file, cb) => {
             // 优先查询参数，其次路由参数，最后默认 common

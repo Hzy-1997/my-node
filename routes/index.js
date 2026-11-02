@@ -33,8 +33,11 @@ router.use("/hotel", require("./managementSystem/hotelRouter/index.js"))
 router.use("/package", require("./managementSystem/comboRouter/index.js"))
 // 预约模块
 router.use("/appointment", require("./managementSystem/appointmentRouter/index.js"))
-// 游客服务与意见建议
+// 游客服务与意见建议  智能问答
 router.use("/serviceSuggestions", require("./managementSystem/serviceRouter/index.js"))
+
+
+
 
 
 
@@ -44,7 +47,9 @@ router.use("/alipay", require("./managementSystem/payment/index.js"))
 // 公共接口（支付/回调/退款，所有业务共用）
 router.use("/public", require("./managementSystem/publicInterface/index.js"))
 // 操作日志
-router.use("/log", require("./managementSystem/operLogRouter/index.js"))
+router.use("/log", checkToken, require("./managementSystem/operLogRouter/index.js"))
+// 字典管理
+router.use("/dict", checkToken, require("./managementSystem/dictTypeRouter/index.js"))
 
 
 

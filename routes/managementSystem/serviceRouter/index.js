@@ -4,6 +4,7 @@ const { operLogMiddleware } = require("../../../utils/operLog")
 
 const touristServices = require("./touristServices")
 const opinionsFeedback = require("./opinionsFeedback")
+const questionsAnswers = require("./questionsAnswers")
 
 
 
@@ -17,6 +18,14 @@ router.get("/touristServicesList", touristServices.touristServicesList)
 router.post("/opinionsFeedbackOperation", opinionsFeedback.feedbackOperation)
 // 意见反馈列表
 router.get("/opinionsFeedbackList", opinionsFeedback.getFeedbackList)
+
+
+// 智能问答操作（创建/更新/删除）
+router.post('/operationQuestionsAnswers', questionsAnswers.operationQuestionsAnswers)
+// 智能问答列表
+router.get('/questionsAnswersList', questionsAnswers.questionsQuestionsAnswersList)
+// 智能问答详情
+router.post('/questionsAnswersDetail', questionsAnswers.questionsAnswersDetail)
 
 
 module.exports = router
