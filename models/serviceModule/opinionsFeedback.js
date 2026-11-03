@@ -17,7 +17,7 @@ const opinionsFeedback = sequelize.define("opinionsFeedback", {
         comment: "主键ID",
     },
     openld: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.STRING,
         allowNull: false,
         comment: "用户ID",
     },
@@ -38,7 +38,7 @@ const opinionsFeedback = sequelize.define("opinionsFeedback", {
         defaultValue: [],
         comment: "反馈图片"
     },
-    userNmae: {
+    userName: {
         type: DataTypes.STRING,
         allowNull: false,
         comment: "用户名",
@@ -50,7 +50,7 @@ const opinionsFeedback = sequelize.define("opinionsFeedback", {
     },
     userEmail: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         comment: "邮箱",
     },
     isHandle: {

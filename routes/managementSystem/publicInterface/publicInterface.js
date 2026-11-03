@@ -685,7 +685,6 @@ exports.refund = async (req, res) => {
 // ============================================================
 // 上传图片
 exports.uploadImg = async (req, res) => {
-
     const category = req.query.category || 'common'; // 默认为common
     console.log("图片上传分类后端:", category);
     if (!allowedCategory(category)) {
@@ -702,6 +701,7 @@ exports.uploadImg = async (req, res) => {
             }
             try {
                 const { path, filename } = req.file;
+                console.log("图片上传成功后端:", path, filename);
                 let imgRoute = {
                     imgRoute: path + "/" + filename,
                     file: req.file,
@@ -735,6 +735,7 @@ exports.uploadWxImg = async (req, res) => {
             try {
                 // multer-aliyun-oss 返回的 req.file.url 为 OSS 完整访问地址
                 const { url, path, filename } = req.file;
+                console.log("图片上传成功:", url, path, filename);
                 return res.json(util.success("上传文件信息成功", {
                     imgUrl: url,                      // 完整 URL，小程序直接使用
                     imgRoute: path + "/" + filename,  // OSS 相对路径
@@ -767,6 +768,7 @@ function allowedCategory(category) {
         'shopping', // 购物图片
         "bus", // 观光车图片
         'service', // 游客服务图片
+        'feedback', // 意见反馈图片
         'common'  // 通用图片
     ];
     return ALLOWED_CATEGORIES.includes(category);

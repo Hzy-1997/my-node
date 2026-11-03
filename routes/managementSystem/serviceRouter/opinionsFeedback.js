@@ -34,25 +34,6 @@ exports.feedbackOperation = async (req, res) => {
             })
             if (!feedback) return res.json(util.fail("提交失败"))
             return res.json(util.success("提交成功"))
-        } else if (action == "update") {
-            let { id } = req.body;
-            if (!id) return res.json(util.fail('缺少必要参数'));
-
-            let feedback = await opinionsFeedback.findOne({
-                where: {
-                    id
-                }
-            })
-            if (!feedback) return res.json(util.fail("意见反馈不存在"))
-            await opinionsFeedback.update({
-                ...req.body
-            }, {
-                where: {
-                    id
-                }
-            })
-            return res.json(util.success("更新成功"))
-
         } else if (action == "delete") {
             let { id } = req.body;
             if (!id) return res.json(util.fail('缺少必要参数'));
