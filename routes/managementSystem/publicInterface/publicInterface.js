@@ -642,6 +642,7 @@ exports.refund = async (req, res) => {
         await RefundOrder.create({
             refundNo: refundResult.tradeNo,
             orderNo: order.orderNumber,
+            userId: userID || adminId,
             userPhone: order.userPhone || order.phone, // 停车预约字段为 phone，其他业务为 userPhone
             refundAmount,
             refundReason: refundReasonText,
