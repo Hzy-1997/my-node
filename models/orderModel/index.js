@@ -11,11 +11,18 @@ const { DataTypes } = require("sequelize");
 const { sequelize } = require("../../mysql/index")
 
 const Order = sequelize.define("Order", {
+    // 自增主键
+    id: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        comment: '自增ID'
+    },
     // 订单号
     orderNumber: {
         type: DataTypes.STRING,
-        allowNull: false,
-        primaryKey: true
+        allowNull: false
     },
     // 票名称
     title: {
@@ -134,7 +141,8 @@ const Order = sequelize.define("Order", {
     indexes: [
         {
             fields: ['orderNumber'],
-            name: 'idx_order_number'
+            name: 'idx_order_number',
+            unique: true
         }
     ]
 })

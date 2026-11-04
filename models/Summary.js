@@ -28,7 +28,7 @@ const { Member } = require("./memberModel/index")
 const { Ticket, holiday } = require("./ticketModel/index")
 const { PriceRule } = require("./ticketModel/priceRule")
 const { Seat } = require("./seatModel/index")
-const { Order } = require("./orderModel/index")
+const { Order } = require("./orderModel/index") 
 const { WriteOff } = require("./ticketModel/writeOff")
 
 // 攻略 运动 休闲 餐饮 购物

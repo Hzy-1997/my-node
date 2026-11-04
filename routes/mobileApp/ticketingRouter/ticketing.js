@@ -8,12 +8,14 @@
  */
 const { Op } = require("sequelize");
 const { Sequelize, DataTypes } = require("sequelize");
+var jwt = require('jsonwebtoken');
 const util = require("../../../utils/util");
 const { post, get } = require("../../../utils/request");
 const { eachDayOfInterval, format, isWeekend, parseISO, addDays } = require("date-fns");
+const { secretJwt } = require('../../../config/index.js');
 
 // 首先引入所有模型
-const { Ticket, PriceRule, holiday } = require("../../../models/Summary");
+const { Ticket, PriceRule, holiday, Order } = require("../../../models/Summary");
 
 // 获取票务详细日期价格
 exports.getTicketDatePrices = async (req, res) => {
@@ -463,4 +465,65 @@ exports.ticketInfor = async (req, res) => {
 
 }
 
+
+// 获取票务订单详情
+
+exports.ticketOrderDetail = async (req, res) => {
+    // 1. 接收 id 和 payStatus
+    const { payStatus, id } = req.query;
+
+    try {
+        if (!req.headers.authorization) {
+            return res.json(util.fail("未登录，请先登录"));
+        }
+
+        let token = req.headers.authorization.replace("Bearer ", "");
+        if (!token) {
+            return res.json(util.fail("登录信息无效，请重新登录"));
+        }
+
+        let userInfo = jwt.verify(token, secretJwt.secret);
+
+        console.log("查询参数 - payStatus:", payStatus, "订单ID:", id);
+
+        let where = {
+            memberId: userInfo.id // 必须有：只能查当前登录用户自己的订单
+        };
+
+        if (id !== undefined && id !== null && id !== '') {
+            where.id = id;
+        }
+
+
+        if (payStatus !== undefined && payStatus !== null && payStatus !== '' && payStatus !== '0') {
+            where.payStatus = Number(payStatus);
+        }
+
+        // 4. 查询数据库
+        const order = await Order.findAll({
+            where,
+            include: [
+                {
+                    model: Ticket,
+                    as: 'ticket',
+                }
+            ]
+        });
+
+
+        if (id && order.length === 0) {
+            return res.json(util.fail("订单不存在或无权查看"));
+        }
+
+        if (id) {
+            return res.json(util.success("获取成功", order[0]));
+        } else {
+            return res.json(util.success("获取成功", order));
+        }
+
+    } catch (error) {
+        console.error("获取票务订单详情错误:", error);
+        return res.json(util.fail("系统出现错误", error.message));
+    }
+}
 

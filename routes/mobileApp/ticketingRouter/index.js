@@ -9,5 +9,8 @@ router.get("/list", ticketingList.ticketList)
 // 票务信息
 router.get("/infor", ticketingList.ticketInfor)
 
+// 票务订单信息
+router.get("/orderDetail", ticketingList.ticketOrderDetail)
+
 
 module.exports = router

@@ -135,6 +135,20 @@ function setupAssociations() {
         onUpdate: 'CASCADE'
     });
 
+    // ==================== Order & Ticket 关联（票务订单）====================
+    // 注意：goodsId 是多态字段（orderType=1 指向票务，2 指向套餐），不做级联删除
+    Order.belongsTo(Ticket, {
+        foreignKey: 'goodsId',
+        targetKey: 'id',
+        as: 'ticket'
+    });
+
+    Ticket.hasMany(Order, {
+        foreignKey: 'goodsId',
+        sourceKey: 'id',
+        as: 'orders'
+    });
+
     // ==================== Ticket & PriceRule 关联 ====================
     Ticket.hasMany(PriceRule, {
         foreignKey: 'ticketId',
