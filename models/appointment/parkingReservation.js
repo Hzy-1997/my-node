@@ -93,6 +93,12 @@ const ParkingReservation = sequelize.define("ParkingReservation", {
         allowNull: true,
         comment: '支付时间',
     },
+    // 退款时间
+    refundTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '退款时间',
+    },
     tradeNo: {
         type: DataTypes.STRING(64),
         allowNull: true,

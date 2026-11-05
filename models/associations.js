@@ -9,6 +9,7 @@ const { Order } = require('./orderModel/index');
 const { RefundOrder } = require('./refundModel/index');
 const { Hotel } = require('./hotelModel/hotel');
 const { RoomType } = require('./hotelModel/roomType');
+const { HotelOrder } = require('./hotelModel/hotelOrder');
 const { RoomPackage } = require('./hotelModel/roomPackage');
 const { RoomPriceRule } = require('./hotelModel/roomPriceRule');
 const { RoomDatePrice } = require('./hotelModel/roomDatePrice');
@@ -117,6 +118,24 @@ function setupAssociations() {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
     });
+
+    // ==================== HotelOrder & RoomType 关联 ====================
+
+    HotelOrder.belongsTo(RoomType, {
+        foreignKey: 'roomId',
+        targetKey: 'id',
+        as: 'roomType',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
+
+    RoomType.hasMany(HotelOrder, {
+        foreignKey: 'roomId',
+        sourceKey: 'id',
+        as: 'hotelOrders',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
 
     // ==================== RoomPackage & RoomPriceRule 关联 ====================
     RoomPackage.hasOne(RoomPriceRule, {

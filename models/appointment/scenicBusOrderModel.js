@@ -115,6 +115,12 @@ const ScenicBusOrder = sequelize.define('scenicBusOrder', {
         allowNull: true,
         comment: '支付时间',
     },
+    // 退款时间（全部票退完、订单流转为已退款时记录）
+    refundTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '退款时间',
+    },
 
     // ========== 6. 核销说明 ==========
     // 核销信息下沉到票明细表 scenicBusOrderTicket（一票一码）：

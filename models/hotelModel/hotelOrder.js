@@ -133,6 +133,12 @@ const HotelOrder = sequelize.define('HotelOrder', {
         allowNull: true,
         comment: '支付时间'
     },
+    // 退款时间
+    refundTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '退款时间'
+    },
     // 核销状态：1-待核销,2-已完成(已核销),3-已过期
     verifyStatus: {
         type: DataTypes.INTEGER,

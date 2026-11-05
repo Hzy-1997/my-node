@@ -84,7 +84,7 @@ async function syncOrderStatusAfterTicketChange(order, t) {
     if (refundedCount >= order.quantity) {
         // 全部票已退 → 已退款
         await ScenicBusOrder.update(
-            { payStatus: 4 },
+            { payStatus: 4, refundTime: new Date() },
             { where: { id: order.id }, transaction: t }
         );
     } else {

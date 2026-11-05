@@ -79,11 +79,16 @@ async function up() {
     console.log('[Seed] 开始插入测试订单数据...');
 
     // 0. 取真实商品/会员 ID（满足 FK 约束）
-    const [memberId, scenicBusId, campTicketId, campsiteId, sessionId, roomPackageId, parkingId] = await Promise.all([
+    const [memberId, scenicBusId, campTicketId, campsiteId, sessionId, roomPackageId, parkingId, roomTypeId] = await Promise.all([
       firstId('members'), firstId('scenicbuses'), firstId('ticket_type'),
       firstId('campsites'), firstId('campsession'), firstId('room_packages'), firstId('parkings'),
+      firstId('room_types'),
     ]);
-    console.log(`[Seed] 商品 ID：member=${memberId} scenicBus=${scenicBusId} campTicket=${campTicketId} campsite=${campsiteId} session=${sessionId} roomPackage=${roomPackageId} parking=${parkingId}`);
+    // 取真实房型名称（订单关联 room_types 才能在接口带出房型/酒店信息）
+    const [[roomType]] = await sequelize.query('SELECT name FROM room_types WHERE id = :id', {
+      replacements: { id: roomTypeId },
+    });
+    console.log(`[Seed] 商品 ID：member=${memberId} scenicBus=${scenicBusId} campTicket=${campTicketId} campsite=${campsiteId} session=${sessionId} roomPackage=${roomPackageId} parking=${parkingId} roomType=${roomTypeId}(${roomType?.name})`);
 
     // 1. 清理旧 seed（幂等，可重复执行）
     await cleanOldSeed();
@@ -241,9 +246,9 @@ async function up() {
         userName: '测试用户' + h.orderNumber.slice(-2),
         userCard: '110101199001011234',
         transactionNumber: 'SEEDTX' + h.orderNumber.replace(/-/g, ''),
-        roomId: 1,                 // 无 FK 约束，测试值
-        title: '山景双床房（测试）',
-        roomTypeId: 1,             // 无 FK 约束，测试值
+        roomId: roomTypeId,         // FK → room_types（真实房型，接口按 roomId 关联带出房型/酒店）
+        title: roomType?.name || '酒店房型（测试）',
+        roomTypeId: roomTypeId,     // 真实房型
         roomCount: 1,
         checkInDate: h.checkIn,
         checkOutDate: h.checkOut,

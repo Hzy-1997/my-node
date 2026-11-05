@@ -118,6 +118,12 @@ const campOrders = sequelize.define("campOrders", {
         allowNull: true,
         comment: '支付时间',
     },
+    // 退款时间
+    refundTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '退款时间',
+    },
     // 备注
     remark: {
         type: DataTypes.TEXT,

@@ -71,6 +71,12 @@ const PackageOrderDetail = sequelize.define('package_order_details', {
         allowNull: true,
         comment: '支付时间'
     },
+    // 退款时间
+    refundTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '退款时间'
+    },
     packageId: {
         type: DataTypes.INTEGER,
         allowNull: false,

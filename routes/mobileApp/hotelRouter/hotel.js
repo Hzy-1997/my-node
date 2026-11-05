@@ -2,9 +2,11 @@ const { Op } = require("sequelize");
 const { Sequelize, DataTypes } = require("sequelize");
 const util = require("../../../utils/util");
 const { generateNights } = require("../../../utils/dateHelper");
-const { Hotel, RoomType, RoomPackage, RoomDatePrice, RoomInventory } = require("../../../models/Summary");
+const { Hotel, RoomType, RoomPackage, RoomDatePrice, RoomInventory, HotelOrder } = require("../../../models/Summary");
 const { sequelize } = require("../../../mysql/index");
 const redisService = require('../../../services/redisService');
+const jwt = require('jsonwebtoken');
+const { secretJwt } = require('../../../config/index.js');
 
 
 
@@ -382,6 +384,63 @@ exports.getHotelDetail = async (req, res) => {
 exports.buyHotel = async (req, res) => {
     try {
         const { id, checkIn, checkOut, num } = validateParams(req.body);
+    } catch (error) {
+        return res.json(util.fail(error.message));
+    }
+}
+
+
+// 酒店订单信息
+exports.hotelOrderDetail = async (req, res) => {
+
+    // 1. 接收 id 和 payStatus
+    let { payStatus, id, page = 1, pageSize = 10 } = req.query;
+
+    page = parseInt(page);
+    pageSize = parseInt(pageSize);
+
+    try {
+        if (!req.headers.authorization) {
+            return res.json(util.fail("未登录，请先登录"));
+        }
+        let token = req.headers.authorization.replace("Bearer ", "");
+        if (!token) {
+            return res.json(util.fail("登录信息无效，请重新登录"));
+        }
+        let userInfo = jwt.verify(token, secretJwt.secret);
+        console.log("查询参数 - payStatus:", payStatus, "订单ID:", id);
+
+
+
+        let where = {
+            userId: userInfo.id // 必须有：只能查当前登录用户自己的订单
+        };
+
+        if (id !== undefined && id !== null && id !== '') {
+            where.id = id;
+        }
+
+        if (payStatus !== undefined && payStatus !== null && payStatus !== '' && payStatus !== '0') {
+            where.payStatus = Number(payStatus);
+        }
+        const result = await HotelOrder.findAll({
+            where: where || {},
+            offset: (page - 1) * pageSize,
+            limit: pageSize,
+            include: [{
+                model: RoomType,
+                as: 'roomType',
+                required: false,          // 建议加，避免 roomId 为空时订单被过滤
+                attributes: ['id', 'name', 'roomDescription', 'image'],
+                include: [{
+                    model: Hotel,
+                    as: 'hotel',
+                    required: false,
+                    attributes: ['id', 'title', 'roomDescription', 'image'],
+                }]
+            }]
+        })
+        return res.json(util.success("获取成功", result));
     } catch (error) {
         return res.json(util.fail(error.message));
     }

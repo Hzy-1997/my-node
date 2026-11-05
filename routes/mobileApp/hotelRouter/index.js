@@ -18,17 +18,17 @@ const hotelApiListt = require("./hotel")
 // 酒店列表
 router.get("/hotelList", hotelApiListt.hotelList)
 
-
 //酒店房型详情
 router.get("/hotelInformation", hotelApiListt.hotelInformation)
 
-
 // 酒店详情
-
 router.get("/hotelDetails", hotelApiListt.getHotelDetail)
 
 // 购买酒店
 router.post("/buyHotel", hotelApiListt.buyHotel)
+
+// 酒店订单信息
+router.get("/hotelOrderDetail", hotelApiListt.hotelOrderDetail)
 
 
 

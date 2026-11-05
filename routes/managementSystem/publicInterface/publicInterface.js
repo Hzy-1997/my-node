@@ -411,6 +411,7 @@ const refundHandlers = {
         updateRefunded: (orderNumber, refundAmount, transaction) => Order.update({
             payStatus: 4,
             refundAmount,
+            refundTime: new Date(),
         }, { where: { orderNumber }, transaction }),
         // 恢复库存
         restoreStock: restoreTicketStock,
@@ -437,6 +438,7 @@ const refundHandlers = {
         updateRefunded: (orderNumber, refundAmount, transaction) => PackageOrderDetail.update({
             payStatus: 4,
             refundAmount,
+            refundTime: new Date(),
         }, { where: { orderNumber }, transaction }),
         // 恢复库存 
         restoreStock: restorePackageStock,
@@ -476,6 +478,7 @@ const refundHandlers = {
         updateRefunded: (orderNumber, refundAmount, transaction) => HotelOrder.update({
             payStatus: 4,
             refundAmount,
+            refundTime: new Date(),
         }, { where: { orderNumber }, transaction }),
         restoreStock: restoreHotelStock,
         getRefundRecordExtras: (order) => ({
@@ -500,6 +503,7 @@ const refundHandlers = {
         // 退款：payStatus 置为已退款(4)，时段自动释放（车位占位判断为 payStatus notIn [4,5]）
         updateRefunded: (orderNumber, refundAmount, transaction) => ParkingReservation.update({
             payStatus: 4,
+            refundTime: new Date(),
             cancelReason: '管理员强制退款',
         }, { where: { orderNumber }, transaction }),
         //释放车位时段（预约单取消后时段自动可用）
@@ -639,6 +643,7 @@ exports.refund = async (req, res) => {
             ? `${userID ? '用户申请' : '后台操作'}退款-${refundRuleDesc}`
             : (userID ? "用户申请退款" : "后台操作退款");
 
+        // 修改退款记录
         await RefundOrder.create({
             refundNo: refundResult.tradeNo,
             orderNo: order.orderNumber,
@@ -651,6 +656,7 @@ exports.refund = async (req, res) => {
             auditorName: operatorName,
             refundType: isForceRefundFlag ? 2 : 1,
             orderType: matchedHandler.orderType,
+            refundTime: new Date(),
             auditTime: userID ? null : new Date(),
         }, { transaction });
 

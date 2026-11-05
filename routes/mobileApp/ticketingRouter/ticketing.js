@@ -470,7 +470,7 @@ exports.ticketInfor = async (req, res) => {
 
 exports.ticketOrderDetail = async (req, res) => {
     // 1. 接收 id 和 payStatus
-    const { payStatus, id } = req.query;
+    const { payStatus, id, page = 1, pageSize = 10 } = req.query;
 
     try {
         if (!req.headers.authorization) {
@@ -502,6 +502,8 @@ exports.ticketOrderDetail = async (req, res) => {
         // 4. 查询数据库
         const order = await Order.findAll({
             where,
+            offset: (page - 1) * pageSize,
+            limit: pageSize,
             include: [
                 {
                     model: Ticket,
@@ -516,7 +518,7 @@ exports.ticketOrderDetail = async (req, res) => {
         }
 
         if (id) {
-            return res.json(util.success("获取成功", order[0]));
+            return res.json(util.success("获取成功", order));
         } else {
             return res.json(util.success("获取成功", order));
         }

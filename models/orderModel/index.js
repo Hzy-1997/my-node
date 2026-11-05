@@ -134,6 +134,12 @@ const Order = sequelize.define("Order", {
         type: DataTypes.DATE,
         allowNull: true,
         comment: '支付时间'
+    },
+    // 退款时间
+    refundTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '退款时间'
     }
 }, {
     tableName: 'orders',

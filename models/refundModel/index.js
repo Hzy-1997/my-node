@@ -10,12 +10,21 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../../mysql/index")
 
+
 const RefundOrder = sequelize.define("RefundOrder", {
-    // 退款单号（主键）
+    // 自增主键
+    id: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        comment: '自增ID'
+    },
+    // 退款单号（唯一）
     refundNo: {
         type: DataTypes.STRING,
         allowNull: false,
-        primaryKey: true,
+        unique: true,
         comment: '退款单号，唯一标识'
     },
     // 原订单号
@@ -92,11 +101,21 @@ const RefundOrder = sequelize.define("RefundOrder", {
         defaultValue: 1,
         comment: '订单类型：1-票务,2-套餐,3-酒店'
     },
+    // 退款时间
+    refundTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '退款时间'
+    },
 }, {
     tableName: 'refund_orders',
     timestamps: true,
-    comment: '退款单表',
     indexes: [ // 索引
+        {
+            fields: ['refundNo'],
+            name: 'idx_refund_no',
+            unique: true
+        },
         {
             fields: ['orderNo'],
             name: 'idx_order_no'
