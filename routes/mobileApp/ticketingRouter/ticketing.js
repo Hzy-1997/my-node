@@ -467,7 +467,6 @@ exports.ticketInfor = async (req, res) => {
 
 
 // 获取票务订单详情
-
 exports.ticketOrderDetail = async (req, res) => {
     // 1. 接收 id 和 payStatus
     const { payStatus, id, page = 1, pageSize = 10 } = req.query;

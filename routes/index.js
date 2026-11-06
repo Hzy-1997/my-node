@@ -4,7 +4,7 @@
  * @Author: sueRimn
  * @Date: 2025-07-17 15:47:46
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2026-10-30 14:53:42
+ * @LastEditTime: 2026-11-06 13:16:38
  */
 var express = require('express');
 const { checkToken } = require("../utils/jwt.js")
@@ -64,6 +64,18 @@ router.use("/wx/service", require("./mobileApp/scenicManagementRouter/index.js")
 router.use("/wx/hotel", require("./mobileApp/hotelRouter/index.js"))
 // 酒店信息
 router.use("/wx/hotelInformation", require("./mobileApp/hotelRouter/index.js"))
+// 套餐信息
+router.use("/wx/combo", require("./mobileApp/comboRouter/index.js"))
+// 营地信息
+router.use("/wx/campsite", require("./mobileApp/campsiteRouter/index.js"))
+// 景区公交（班车）订单
+router.use("/wx/scenicBus", require("./mobileApp/scenicBusRouter/index.js"))
+// 停车场预约订单
+router.use("/wx/parking", require("./mobileApp/parkingRouter/index.js"))
+// // 餐饮信息
+// router.use("/wx/food", require("./mobileApp/foodRouter/index.js"))
+// // 景区信息
+// router.use("/wx/scenic", require("./mobileApp/scenicManagementRouter/index.js"))
 
 
 

@@ -255,6 +255,40 @@ function setupAssociations() {
         onUpdate: 'CASCADE'
     })
 
+    // campOrders & Campsite（订单 -> 营地）
+    campOrders.belongsTo(Campsite, {
+        foreignKey: 'campsiteId',
+        targetKey: 'id',
+        as: 'campsite',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
+
+    Campsite.hasMany(campOrders, {
+        foreignKey: 'campsiteId',
+        sourceKey: 'id',
+        as: 'orders',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
+
+    // campOrders & CampSession（订单 -> 场次）
+    campOrders.belongsTo(CampSession, {
+        foreignKey: 'sessionId',
+        targetKey: 'id',
+        as: 'session',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
+
+    CampSession.hasMany(campOrders, {
+        foreignKey: 'sessionId',
+        sourceKey: 'id',
+        as: 'orders',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    })
+
     // campOrders & campOrderParticipants（订单 -> 营员明细，一单多人）
     campOrders.hasMany(campOrderParticipants, {
         foreignKey: 'orderId',
@@ -560,9 +594,23 @@ function setupAssociations() {
         onUpdate: 'CASCADE'
     });
 
+    // ==================== PackageOrderDetail & ProductPackage 关联（所属套餐）====================
+    PackageOrderDetail.belongsTo(ProductPackage, {
+        foreignKey: 'packageId',
+        targetKey: 'id',
+        as: 'package'
+    });
+
+    ProductPackage.hasMany(PackageOrderDetail, {
+        foreignKey: 'packageId',
+        sourceKey: 'id',
+        as: 'orderDetails'
+    });
+
     // ==================== PackageOrderDetail & RoomPackage 关联（酒店房型）====================
+    // 注意：foreignKey 用模型里已定义的属性名（驼峰），实际列名 room_package_id 由 underscored 自动映射
     PackageOrderDetail.belongsTo(RoomPackage, {
-        foreignKey: 'room_package_id',
+        foreignKey: 'roomPackageId',
         targetKey: 'id',
         as: 'roomPackage',
         onDelete: 'SET NULL',
@@ -570,7 +618,7 @@ function setupAssociations() {
     });
 
     RoomPackage.hasMany(PackageOrderDetail, {
-        foreignKey: 'room_package_id',
+        foreignKey: 'roomPackageId',
         sourceKey: 'id',
         as: 'orderDetails',
         onDelete: 'SET NULL',
@@ -579,7 +627,7 @@ function setupAssociations() {
 
     // ==================== PackageOrderDetail & Ticket 关联（门票）====================
     PackageOrderDetail.belongsTo(Ticket, {
-        foreignKey: 'ticket_id',
+        foreignKey: 'ticketId',
         targetKey: 'id',
         as: 'ticket',
         onDelete: 'SET NULL',
@@ -587,7 +635,7 @@ function setupAssociations() {
     });
 
     Ticket.hasMany(PackageOrderDetail, {
-        foreignKey: 'ticket_id',
+        foreignKey: 'ticketId',
         sourceKey: 'id',
         as: 'orderDetails',
         onDelete: 'SET NULL',
@@ -596,7 +644,7 @@ function setupAssociations() {
 
     // ==================== PackageOrderDetail & PriceRule 关联（门票价格规则）====================
     PackageOrderDetail.belongsTo(PriceRule, {
-        foreignKey: 'ticket_price_rule_id',
+        foreignKey: 'ticketPriceRuleId',
         targetKey: 'id',
         as: 'ticketPriceRule',
         onDelete: 'SET NULL',
@@ -604,7 +652,7 @@ function setupAssociations() {
     });
 
     PriceRule.hasMany(PackageOrderDetail, {
-        foreignKey: 'ticket_price_rule_id',
+        foreignKey: 'ticketPriceRuleId',
         sourceKey: 'id',
         as: 'orderDetails',
         onDelete: 'SET NULL',

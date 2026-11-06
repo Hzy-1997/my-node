@@ -421,8 +421,11 @@ exports.hotelOrderDetail = async (req, res) => {
         }
 
         if (payStatus !== undefined && payStatus !== null && payStatus !== '' && payStatus !== '0') {
-            where.payStatus = Number(payStatus);
+            where.payStatus = parseInt(payStatus);
         }
+
+        console.log("查询条件:", where);
+
         const result = await HotelOrder.findAll({
             where: where || {},
             offset: (page - 1) * pageSize,
@@ -436,7 +439,7 @@ exports.hotelOrderDetail = async (req, res) => {
                     model: Hotel,
                     as: 'hotel',
                     required: false,
-                    attributes: ['id', 'title', 'roomDescription', 'image'],
+                    attributes: ['id', 'title', 'images'],
                 }]
             }]
         })
