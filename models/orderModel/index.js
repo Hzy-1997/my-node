@@ -106,6 +106,11 @@ const Order = sequelize.define("Order", {
             isIn: [[1, 2, 3]], // 核销状态：1-待核销，2-已完成，3-已过期
         },
     },
+    verificationCode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: '核销码'
+    },
     // 取消原因（payStatus=5 已取消时记录，如"超时未支付自动取消"）
     cancelReason: {
         type: DataTypes.STRING(255),

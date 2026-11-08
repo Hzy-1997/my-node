@@ -30,26 +30,59 @@ const CODE = {
  * @returns {Array} 返回格式化后的数据数组，如果输入不是数组则直接返回输入值
  */
 function formDate(dateStr) {
-    if (!Array.isArray(dateStr)) {
-        return dateStr;
+    console.log("时间", dateStr);
+
+    // 空值直接返回
+    if (!dateStr) return dateStr;
+
+    // 判断是否为 Sequelize 模型实例（有 toJSON 方法）
+    const isModel = typeof dateStr.toJSON === 'function';
+
+    // ========== 情况二：对象里包数组 ==========
+    if (isModel || (!Array.isArray(dateStr) && typeof dateStr === 'object')) {
+        // 先转成普通对象
+        const plain = isModel ? dateStr.toJSON() : { ...dateStr };
+
+        // 遍历对象的每个字段，遇到数组就递归处理
+        Object.keys(plain).forEach((key) => {
+            if (Array.isArray(plain[key])) {
+                plain[key] = formDate(plain[key]);   // 递归，数组走情况一
+            }
+        });
+
+        // 对象自身的 createdAt 等时间字段也要格式化
+        plain.createdAt = plain.createdAt ? formatTime(plain.createdAt) : plain.createdAt ?? null;
+        plain.updatedAt = plain.updatedAt ? formatTime(plain.updatedAt) : plain.updatedAt ?? null;
+        plain.created_at = plain.created_at ? formatTime(plain.created_at) : plain.created_at ?? null;
+        plain.updated_at = plain.updated_at ? formatTime(plain.updated_at) : plain.updated_at ?? null;
+
+        return plain;
     }
 
-    // 使用map方法处理数组中的每个元素
-    let data = dateStr.map((item) => {
-        // 处理Sequelize模型实例，先转换为普通对象
-        const plainItem = item.toJSON ? item.toJSON() : item;
+    // ========== 情况一：直接是数组 ==========
+    if (Array.isArray(dateStr)) {
+        return dateStr.map((item) => {
+            const plainItem = item.toJSON ? item.toJSON() : item;
 
-        // 返回新对象，展开原对象的所有属性，并格式化createdAt字段
-        return {
-            ...plainItem,
-            createdAt: plainItem.createdAt ? formatTime(plainItem.createdAt) : null,
-            updatedAt: plainItem.updatedAt ? formatTime(plainItem.updatedAt) : null,
-            created_at: plainItem.created_at ? formatTime(plainItem.created_at) : null,
-            updated_at: plainItem.updated_at ? formatTime(plainItem.updated_at) : null
-        };
-    });
+            // 数组元素内部也可能有数组字段（比如 item.roomType 之类），递归处理
+            Object.keys(plainItem).forEach((key) => {
+                if (Array.isArray(plainItem[key])) {
+                    plainItem[key] = formDate(plainItem[key]);
+                }
+            });
 
-    return data;
+            return {
+                ...plainItem,
+                createdAt: plainItem.createdAt ? formatTime(plainItem.createdAt) : null,
+                updatedAt: plainItem.updatedAt ? formatTime(plainItem.updatedAt) : null,
+                created_at: plainItem.created_at ? formatTime(plainItem.created_at) : null,
+                updated_at: plainItem.updated_at ? formatTime(plainItem.updated_at) : null
+            };
+        });
+    }
+
+    // 其他类型原样返回
+    return dateStr;
 }
 
 function formatTime(dateStr) {
@@ -70,14 +103,23 @@ function formatTime(dateStr) {
  * 生成单号
  * 格式: ORD + 日期(8位) + 用户ID(6位) + Redis自增(5位) + 时间戳后4位(4位)
  * 示例: ORD20250314000042000017890 
+ * @param {string} beginning - 业务前缀，如 'TKT', 'HTL', 'PKG' 等
  * @returns {Promise<string>} 订单号
+ * @description
  */
 async function generateOrderNo(beginning) {
-    const prefix = beginning;
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // 20250314 (8位)
-    const seq = await redisService.incrFun(`order:seq:${date}`); // Redis自增
-    const seqPart = String(seq).padStart(6, '0'); // 0000001 (6位)
-    const timePart = Date.now().toString();
+    const prefix = beginning || 'ORD';
+    // 获取本地时间（东八区）8位，如 20260821
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const date = `${y}${m}${d}`;
+    // Redis 自增：000012 (6位)
+    const seq = await redisService.incrFun(`order:seq:${prefix}:${date}`);
+    const seqPart = String(seq).padStart(6, '0');
+    const timePart = String(Date.now()).slice(-6);
+    // 总长度： TKT20260821000012178728 = 23位 
     return `${prefix}${date}${seqPart}${timePart}`;
 }
 
@@ -92,45 +134,32 @@ function randomCode(len = 8) {
     return s;
 }
 
-function formatDate() {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}${m}${day}`;
-}
-
-async function refillPool(date, target = 200000) {
-    const key = `verify:pool:${date}`;
-    const size = await redisService.scardFun(key);
-    if (size >= target) return;
-    const need = Math.min(target - size, 10000);
-    const set = new Set();
-    while (set.size < need) set.add(randomCode(8));
-    await redisService.saddFun(key, [...set]);
-    await redisService.expire(key, 3 * 24 * 3600);
-}
-
+/**
+ * 生成核销编码（自增序列方案）
+ * 格式: YYMMDD(6位) + 当日自增序号(6位) + 随机码(4位) = 16位
+ * 示例: 261106000001A3K9
+ * 唯一性由 Redis INCR 自增保证，无需预生成码池
+ */
 async function generateWriteOffCode(count) {
-    const date = formatDate(); // 只调一次
-    const key = `verify:pool:${date}`;
+    const now = new Date();
+    // 6位短日期 YYMMDD（比如 261106）
+    const date = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const seqKey = `verify:seq:${date}`;
+
+    // 一次 INCRBY 批量取号，避免 count 次 Redis 往返
+    const end = await redisService.incrByFun(seqKey, count);
+    if (end === count) {
+        // 首次创建当天计数器时设置过期，避免残留死 key
+        await redisService.expire(seqKey, 3 * 24 * 3600);
+    }
 
     const codes = [];
-    let guard = 0; // 防死循环
-
-    while (codes.length < count) {
-        const need = count - codes.length;
-        const got = await redisService.spopFun(key, need);
-        if (got.length > 0) {
-            codes.push(...got);
-            continue;
-        }
-        // 池子空了，补池
-        if (++guard > 50) throw new Error('码池不足，补池多次仍无法满足');
-        await refillPool(date);
+    for (let i = 0; i < count; i++) {
+        const seqPart = String(end - count + 1 + i).padStart(6, '0'); // 6位自增，一天99万单够用
+        const randPart = randomCode(4); // 4位随机码，防猜测
+        codes.push(`${date}${seqPart}${randPart}`);
     }
-    // 拼日期 → 20261012 + A3K9X2M7 = 20261012A3K9X2M7
-    return codes.map(c => date + c);
+    return codes;
 }
 
 // 格式化返回数据

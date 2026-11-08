@@ -119,6 +119,25 @@ class RedisService {
   }
 
   /**
+   * 原子递增指定步长
+   * @async
+   * @param {string} key - 要递增的键名
+   * @param {number} amount - 递增步长
+   * @returns {number} 递增后的值
+   */
+  async incrByFun(key, amount) {
+    let client = null;
+    try {
+      client = await this.pool.getClient();
+      return await client.incrBy(String(key), parseInt(amount));
+    } finally {
+      if (client) {
+        await this.pool.releaseClient(client);
+      }
+    }
+  }
+
+  /**
    * 原子递减
    * @async
    * @param {string} key - 要递减的键名
@@ -129,25 +148,6 @@ class RedisService {
     try {
       client = await this.pool.getClient();
       return await client.decr(String(key));
-    } finally {
-      if (client) {
-        await this.pool.releaseClient(client);
-      }
-    }
-  }
-
-  /**
-   * 集合操作 - 添加成员
-   * @async
-   * @param {string} key - 集合键名
-   * @param {string|string[]} members - 要添加的成员，可以是单个成员或成员数组
-   * @returns {number} 添加的成员数量
-   */
-  async saddFun(key, members) {
-    let client = null;
-    try {
-      client = await this.pool.getClient();
-      return await client.sAdd(String(key), members);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);
@@ -204,44 +204,6 @@ class RedisService {
     try {
       client = await this.pool.getClient();
       return await client.sRem(String(key), members);
-    } finally {
-      if (client) {
-        await this.pool.releaseClient(client);
-      }
-    }
-  }
-
-  /**
-   * 集合操作 - 获取集合成员数量
-   * @async
-   * @param {string} key - 集合键名
-   * @returns {number} 集合中的成员数量
-   */
-  async scardFun(key) {
-    let client = null;
-    try {
-      client = await this.pool.getClient();
-      return await client.sCard(String(key));
-    } finally {
-      if (client) {
-        await this.pool.releaseClient(client);
-      }
-    }
-  }
-
-  /**
-   * 集合操作 - 随机弹出成员
-   * @async
-   * @param {string} key - 集合键名
-   * @param {number} [count=1] - 要弹出的成员数量
-   * @returns {string[]} 弹出的成员数组（成员不足时返回已有部分，可能为空数组）
-   */
-  async spopFun(key, count = 1) {
-    let client = null;
-    try {
-      client = await this.pool.getClient();
-      // node-redis v5 带数量的 SPOP 是独立方法 sPopCount（sPop 不接受 count 参数），键不存在时返回空数组
-      return await client.sPopCount(String(key), count);
     } finally {
       if (client) {
         await this.pool.releaseClient(client);

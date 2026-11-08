@@ -393,8 +393,8 @@ exports.buyHotel = async (req, res) => {
 // 酒店订单信息
 exports.hotelOrderDetail = async (req, res) => {
 
-    // 1. 接收 id 和 payStatus
-    let { payStatus, id, page = 1, pageSize = 10 } = req.query;
+    // 1. 接收 orderNumber（订单号，查详情）和 payStatus（状态筛选）
+    let { payStatus, orderNumber, page = 1, pageSize = 10 } = req.query;
 
     page = parseInt(page);
     pageSize = parseInt(pageSize);
@@ -408,7 +408,7 @@ exports.hotelOrderDetail = async (req, res) => {
             return res.json(util.fail("登录信息无效，请重新登录"));
         }
         let userInfo = jwt.verify(token, secretJwt.secret);
-        console.log("查询参数 - payStatus:", payStatus, "订单ID:", id);
+        console.log("查询参数 - payStatus:", payStatus, "订单号:", orderNumber);
 
 
 
@@ -416,8 +416,8 @@ exports.hotelOrderDetail = async (req, res) => {
             userId: userInfo.id // 必须有：只能查当前登录用户自己的订单
         };
 
-        if (id !== undefined && id !== null && id !== '') {
-            where.id = id;
+        if (orderNumber !== undefined && orderNumber !== null && orderNumber !== '') {
+            where.orderNumber = orderNumber;
         }
 
         if (payStatus !== undefined && payStatus !== null && payStatus !== '' && payStatus !== '0') {

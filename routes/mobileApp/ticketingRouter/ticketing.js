@@ -468,8 +468,8 @@ exports.ticketInfor = async (req, res) => {
 
 // 获取票务订单详情
 exports.ticketOrderDetail = async (req, res) => {
-    // 1. 接收 id 和 payStatus
-    const { payStatus, id, page = 1, pageSize = 10 } = req.query;
+    // 1. 接收 orderNumber（订单号，查详情）和 payStatus（状态筛选）
+    const { payStatus, orderNumber, page = 1, pageSize = 10 } = req.query;
 
     try {
         if (!req.headers.authorization) {
@@ -483,22 +483,22 @@ exports.ticketOrderDetail = async (req, res) => {
 
         let userInfo = jwt.verify(token, secretJwt.secret);
 
-        console.log("查询参数 - payStatus:", payStatus, "订单ID:", id);
+        console.log("查询参数 - payStatus:", payStatus, "订单号:", orderNumber);
 
         let where = {
-            memberId: userInfo.id // 必须有：只能查当前登录用户自己的订单
+            memberId: userInfo.id, // 必须有：只能查当前登录用户自己的订单
+
         };
 
-        if (id !== undefined && id !== null && id !== '') {
-            where.id = id;
+        if (orderNumber !== undefined && orderNumber !== null && orderNumber !== '') {
+            where.orderNumber = orderNumber;
         }
-
-
+        // 状态筛选 ：0=全部支付状态 
         if (payStatus !== undefined && payStatus !== null && payStatus !== '' && payStatus !== '0') {
             where.payStatus = Number(payStatus);
         }
 
-        // 4. 查询数据库
+        // 4. 查询数据库（orderNumber 有唯一索引，一单一行）
         const order = await Order.findAll({
             where,
             offset: (page - 1) * pageSize,
@@ -511,16 +511,11 @@ exports.ticketOrderDetail = async (req, res) => {
             ]
         });
 
-
-        if (id && order.length === 0) {
+        if (orderNumber && order.length === 0) {
             return res.json(util.fail("订单不存在或无权查看"));
         }
 
-        if (id) {
-            return res.json(util.success("获取成功", order));
-        } else {
-            return res.json(util.success("获取成功", order));
-        }
+        return res.json(util.success("获取成功", order));
 
     } catch (error) {
         console.error("获取票务订单详情错误:", error);

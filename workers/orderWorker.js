@@ -12,6 +12,7 @@ const hotelPurchaseService = require('../services/hotelPurchaseService');
 const { Order, Ticket, PackageOrderDetail, PackageItem, RoomPackage, RoomInventory, PackageDatePrice, HotelOrder, ParkingReservation, campOrders } = require('../models/Summary');
 const { setupAssociations } = require('../models/associations');
 const { generateNights } = require('../utils/dateHelper');
+const { generateWriteOffCode } = require('../utils/util');
 
 /**
  * 处理订单创建
@@ -178,11 +179,7 @@ async function processTicketOrder(orderData) {
     return { success: true, orderId: order.id };
 }
 
-function generateVerifyCode() {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `${timestamp}${random}`.toUpperCase();
-}
+
 
 async function rollbackPackageStock(orderData) {
     const { packageItemId, roomTypeId, buyNum, dateRange } = orderData;
@@ -454,6 +451,7 @@ async function processPaymentCallback(paymentData) {
                     await Order.update({
                         payStatus: 2, // 已支付
                         orderAmount: total_amount,
+                        verificationCode: generateWriteOffCode(), // 核销码：支付成功时生成
                         alipayTradeNo: notifyData.trade_no,
                         paymentTime: notifyData.gmt_payment,
                     }, { where: { orderNumber: out_trade_no } });
