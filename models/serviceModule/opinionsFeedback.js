@@ -32,7 +32,7 @@ const opinionsFeedback = sequelize.define("opinionsFeedback", {
         comment: "反馈内容",
     },
     //图片
-    iamges: {
+    images: {
         type: DataTypes.JSON,
         allowNull: true,
         defaultValue: [],

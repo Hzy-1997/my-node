@@ -18,7 +18,7 @@ const hotelApiListt = require("./hotel")
 // 酒店列表
 router.get("/hotelList", hotelApiListt.hotelList)
 
-//酒店房型详情
+// 酒店房型详情
 router.get("/hotelInformation", hotelApiListt.hotelInformation)
 
 // 酒店详情

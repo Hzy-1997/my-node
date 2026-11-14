@@ -1,3 +1,11 @@
+/*
+ * @描述: 
+ * @版本: 
+ * @作者: 
+ * @日期: ${year}-${month}-${day}
+ * @最后编辑者: sueRimn
+ * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
+ */
 const { Op } = require("sequelize");
 const { Sequelize, DataTypes } = require("sequelize");
 const util = require("../../../utils/util");
@@ -67,7 +75,6 @@ exports.touristServicesList = async (req, res) => {
         if (status) where.status = parseInt(status)
         if (serviceType) where.serviceType = parseInt(serviceType)
 
-
         page = parseInt(page)
         pageSize = parseInt(pageSize)
         let { rows, count } = await touristServices.findAndCountAll({
@@ -81,7 +88,6 @@ exports.touristServicesList = async (req, res) => {
             count,
         }
         ))
-
 
     } catch (error) {
         return res.json(util.fail(error.message))

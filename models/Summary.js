@@ -6,14 +6,6 @@
  * @最后编辑者: sueRimn
  * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
  */
-/*
- * @描述: 
- * @版本: 
- * @作者: 
- * @日期: ${year}-${month}-${day}
- * @最后编辑者: sueRimn
- * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
- */
 
 // 表 创 建
 const { User } = require('./userModel/user');
@@ -28,7 +20,7 @@ const { Member } = require("./memberModel/index")
 const { Ticket, holiday } = require("./ticketModel/index")
 const { PriceRule } = require("./ticketModel/priceRule")
 const { Seat } = require("./seatModel/index")
-const { Order } = require("./orderModel/index") 
+const { Order } = require("./orderModel/index")
 const { WriteOff } = require("./ticketModel/writeOff")
 
 // 攻略 运动 休闲 餐饮 购物
@@ -82,6 +74,8 @@ const { ScenicBusOrderTicket } = require("./appointment/scenicBusOrderTicketMode
 // 游客服务--意见与反馈
 const { touristServices } = require("./serviceModule/touristServices")
 const { opinionsFeedback } = require("./serviceModule/opinionsFeedback")
+// 服务设施点位（卫生间/吸烟区等，分类走字典）
+const { ServiceFacility } = require("./serviceModule/serviceFacility")
 // 字典类型
 const { DictCategory, DictData } = require("./dictType/dictType")
 // 智能问答表
@@ -110,6 +104,7 @@ module.exports = {
     campOrders, campOrderParticipants, CampSession, Campsite, Parking, ParkingReservation, ParkingSpot, TicketType,
     ScenicBus, ScenicBusOrder, ScenicBusOrderTicket,
     touristServices, opinionsFeedback,
+    ServiceFacility,
     DictCategory, DictData,
     QuestionsAnswers
 };

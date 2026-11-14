@@ -62,6 +62,9 @@ function formDate(dateStr) {
     // ========== 情况一：直接是数组 ==========
     if (Array.isArray(dateStr)) {
         return dateStr.map((item) => {
+            // 基本类型（字符串/数字/布尔/null）直接返回，避免字符串被展开成字符索引对象（如权限标识数组）
+            if (item === null || typeof item !== 'object') return item;
+
             const plainItem = item.toJSON ? item.toJSON() : item;
 
             // 数组元素内部也可能有数组字段（比如 item.roomType 之类），递归处理
