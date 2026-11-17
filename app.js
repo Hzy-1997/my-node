@@ -34,7 +34,9 @@ var cors = require('cors');
 // 定时任务
 const cron = require('node-cron');
 
+// 引入定时任务
 const seckillPayment = require('./routes/managementSystem/payment/seckillPayment');
+
 // 日志记录
 const { logRequestMiddleware } = require('./utils/jwt');
 
@@ -127,7 +129,9 @@ function initializeCronJobs() {
   // 全业务订单状态定时任务（每30秒扫描）：
   //   一、超时未支付自动取消（payStatus=5 + 回补库存，支付宝不回调时的 DB 对账兜底）
   //   二、已支付订单超使用期未核销 → verifyStatus=3 已过期；夏令营结营 → payStatus 2→3
-  // require('./tasks/orderExpireTask').start();
+  require('./tasks/orderExpireTask').start();
+
+
 
   console.log('[Cron] 定时任务已初始化，每天 00:30 执行库存重置，每30秒扫描订单状态');
 }

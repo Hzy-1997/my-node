@@ -16,7 +16,7 @@ const { Menu } = require('./menuModel/index');
 // 会员
 const { Member } = require("./memberModel/index")
 
-// 演出
+// 票务
 const { Ticket, holiday } = require("./ticketModel/index")
 const { PriceRule } = require("./ticketModel/priceRule")
 const { Seat } = require("./seatModel/index")
@@ -74,12 +74,21 @@ const { ScenicBusOrderTicket } = require("./appointment/scenicBusOrderTicketMode
 // 游客服务--意见与反馈
 const { touristServices } = require("./serviceModule/touristServices")
 const { opinionsFeedback } = require("./serviceModule/opinionsFeedback")
-// 服务设施点位（卫生间/吸烟区等，分类走字典）
+
+// 服务设施点位（卫生间/吸烟区等）
 const { ServiceFacility } = require("./serviceModule/serviceFacility")
+
 // 字典类型
 const { DictCategory, DictData } = require("./dictType/dictType")
+
 // 智能问答表
 const { QuestionsAnswers } = require("./questionsAnswersModel/questionsAnswers")
+
+// 订阅提醒
+const { Reminder } = require("./reminderModel/index")
+
+// 联系电话表
+const { contactPhone } = require("./contactPhoneModel/contactPhone")
 
 
 
@@ -106,5 +115,7 @@ module.exports = {
     touristServices, opinionsFeedback,
     ServiceFacility,
     DictCategory, DictData,
-    QuestionsAnswers
+    QuestionsAnswers,
+    Reminder,
+    contactPhone,
 };

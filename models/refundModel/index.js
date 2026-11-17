@@ -109,7 +109,7 @@ const RefundOrder = sequelize.define("RefundOrder", {
     },
 }, {
     tableName: 'refund_orders',
-    timestamps: true,
+    timestamps: true, 
     indexes: [ // 索引
         {
             fields: ['refundNo'],

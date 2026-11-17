@@ -1,3 +1,11 @@
+/*
+ * @描述: 
+ * @版本: 
+ * @作者: 
+ * @日期: ${year}-${month}-${day}
+ * @最后编辑者: sueRimn
+ * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
+ */
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../mysql/index');
 
@@ -36,7 +44,7 @@ const QuestionsAnswers = sequelize.define('questionsAnswers', {
         comment: "1-禁用，2-启用"
     }
 }, {
-    timestamps: false,
+    timestamps: false, 
 })
 
 module.exports = {

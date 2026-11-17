@@ -4,7 +4,7 @@
  * @Author: sueRimn
  * @Date: 2025-07-17 15:47:46
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2026-11-06 13:16:38
+ * @LastEditTime: 2026-11-17 15:24:33
  */
 var express = require('express');
 const { checkToken } = require("../utils/jwt.js")
@@ -50,6 +50,8 @@ router.use("/public", require("./managementSystem/publicInterface/index.js"))
 router.use("/log", checkToken, require("./managementSystem/operLogRouter/index.js"))
 // 字典管理
 router.use("/dict", checkToken, require("./managementSystem/dictTypeRouter/index.js"))
+// 联系电话管理
+router.use("/contactPhone", require("./managementSystem/contactPhoneRouter/index.js"))
 
 
 
@@ -72,6 +74,8 @@ router.use("/wx/campsite", require("./mobileApp/campsiteRouter/index.js"))
 router.use("/wx/scenicBus", require("./mobileApp/scenicBusRouter/index.js"))
 // 停车场
 router.use("/wx/parking", require("./mobileApp/parkingRouter/index.js"))
+// 订阅提醒
+router.use("/wx/subscribe", require("./mobileApp/subscribeRouter/index.js"))
 
 
 // // 餐饮信息
