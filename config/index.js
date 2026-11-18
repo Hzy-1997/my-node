@@ -42,6 +42,7 @@ module.exports = {
     // 微信小程序配置
     APP_ID: process.env.WX_APP_ID,
     ACCESS_SECRET: process.env.WX_SECRET,
+    WX_REMINDER_TEMPLATE_ID: process.env.WX_REMINDER_TEMPLATE_ID,
 
     // 支付宝配置
     alipayPZ: {

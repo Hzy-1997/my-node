@@ -73,6 +73,8 @@ const { ScenicBus } = require('./appointment/scenicBusModel');
 const { ScenicBusOrder } = require('./appointment/scenicBusOrderModel');
 const { ScenicBusOrderTicket } = require('./appointment/scenicBusOrderTicketModel');
 const { Reminder } = require("./reminderModel/index")
+const { Performance } = require('./performance/performance');
+const { PerformanceSchedule } = require('./performance/performanceSchedule');
 
 
 
@@ -718,6 +720,24 @@ function setupAssociations() {
     });
 
 
+
+    // ==================== 演艺演出模块关联（Performance / PerformanceSchedule）====================
+    // Performance & PerformanceSchedule（演出 -> 场次，删除演出时级联删除其全部场次）
+    Performance.hasMany(PerformanceSchedule, {
+        foreignKey: 'performanceId',
+        sourceKey: 'id',
+        as: 'schedules',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    });
+
+    PerformanceSchedule.belongsTo(Performance, {
+        foreignKey: 'performanceId',
+        targetKey: 'id',
+        as: 'performance',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+    });
 
     console.log('模型关联关系已建立');
 }

@@ -18,7 +18,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 const multer = require('multer');
 
-const redisService = require('../../../services/redisService');
+const { getWxAccessToken } = require('../AmethodRouter/index.js');
 
 const { APP_ID, ACCESS_SECRET, secretJwt } = require('../../../config/index.js');
 
@@ -78,41 +78,6 @@ exports.createMember = async (req, res) => {
     }
 }
 
-
-// 模块级变量，记录正在进行的 token 获取 Promise
-// 获取微信access_token
-// 缓存10分钟，避免频繁请求微信
-// 200秒过期，确保在过期前有时间刷新
-let tokenPromise = null;
-
-const getWxAccessToken = async () => {
-    const cacheKey = `accessToken:wx:${APP_ID}`;
-
-    // 1. 先查缓存
-    const cached = await redisService.getFun(cacheKey);
-    if (cached) return cached;
-
-    // 2. 如果已经有请求在获取 token，直接等它，不要再发一次
-    if (tokenPromise) return tokenPromise;
-
-    // 3. 第一个进来的请求，负责去获取 token
-    tokenPromise = (async () => {
-        try {
-            const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APP_ID}&secret=${ACCESS_SECRET}`;
-            const { data } = await axios.get(url);
-            if (!data.access_token) {
-                throw new Error(`获取 token 失败: ${data.errmsg}`);
-            }
-            await redisService.setFun(cacheKey, data.access_token, data.expires_in - 200);
-            return data.access_token;
-        } finally {
-            // 无论成功失败，都要清空，让下次能重新获取
-            tokenPromise = null;
-        }
-    })();
-
-    return tokenPromise;
-};
 
 // 手机号一键登录
 exports.loginByPhone = async (req, res) => {
