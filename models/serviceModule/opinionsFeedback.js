@@ -16,7 +16,7 @@ const opinionsFeedback = sequelize.define("opinionsFeedback", {
         autoIncrement: true,
         comment: "主键ID",
     },
-    openld: {
+    openId: {
         type: DataTypes.STRING,
         allowNull: false,
         comment: "用户ID",

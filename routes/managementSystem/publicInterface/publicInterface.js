@@ -763,6 +763,7 @@ function allowedCategory(category) {
     const ALLOWED_CATEGORIES = [
         'avatar', // 用户头像
         'ticket', // 票务图片
+        'performance', // 演出图片
         'hotel', // 酒店图片
         'package', // 套餐图片
         'parking', // 停车图片

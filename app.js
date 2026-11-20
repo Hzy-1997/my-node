@@ -4,7 +4,7 @@
  * @Author: sueRimn
  * @Date: 2025-07-17 15:47:46
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2026-11-18 13:04:48
+ * @LastEditTime: 2026-11-20 17:16:00
  */
 console.log("当前环境：", process.env.NODE_ENV);
 // 加载环境变量 - 支持开发、测试、生产环境
@@ -130,6 +130,7 @@ function initializeCronJobs() {
   //   一、超时未支付自动取消（payStatus=5 + 回补库存，支付宝不回调时的 DB 对账兜底）
   //   二、已支付订单超使用期未核销 → verifyStatus=3 已过期；夏令营结营 → payStatus 2→3
   // require('./tasks/orderExpireTask').start();
+  require("./tasks/subscribeTask").start();
 
 
 

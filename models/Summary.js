@@ -90,6 +90,10 @@ const { Reminder } = require("./reminderModel/index")
 // 联系电话表
 const { contactPhone } = require("./contactPhoneModel/contactPhone")
 
+// 演出表
+const { Performance } = require("./performanceModel/performance")
+const { PerformanceSchedule } = require("./performanceModel/performanceSchedule")
+
 
 
 
@@ -118,4 +122,5 @@ module.exports = {
     QuestionsAnswers,
     Reminder,
     contactPhone,
+    Performance, PerformanceSchedule,
 };

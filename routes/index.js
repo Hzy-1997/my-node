@@ -52,6 +52,8 @@ router.use("/log", checkToken, require("./managementSystem/operLogRouter/index.j
 router.use("/dict", checkToken, require("./managementSystem/dictTypeRouter/index.js"))
 // 联系电话管理
 router.use("/contactPhone", require("./managementSystem/contactPhoneRouter/index.js"))
+// 演出管理
+router.use("/performance", require("./managementSystem/performanceRouter/index.js"))
 
 
 

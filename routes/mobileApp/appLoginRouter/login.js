@@ -45,7 +45,7 @@ exports.createMember = async (req, res) => {
         // 查询用户是否已存在
         let user = await Member.findOne({
             where: {
-                openld: openid
+                openId: openid
             }
         });
 
@@ -56,7 +56,7 @@ exports.createMember = async (req, res) => {
         } else {
             userInfo = await Member.create({
                 userName: userName,
-                openld: openid,
+                openId: openid,
                 avatar: avatar,
             })
         }
@@ -64,7 +64,7 @@ exports.createMember = async (req, res) => {
         let tokenPayload = {
             id: userInfo.id,
             userName: userInfo.userName,
-            openld: openid,
+            openId: openid,
             avatar: userInfo.avatar,
         }
         let token = jwt.sign(tokenPayload, secretJwt.secret, { expiresIn: secretJwt.expiresIn });
@@ -109,7 +109,7 @@ exports.loginByPhone = async (req, res) => {
         let user = await Member.findOne({
             where: {
                 [Op.or]: [
-                    { openld: openid },
+                    { openId: openid },
                     { phone: phoneNumber }
                 ]
             }
@@ -118,8 +118,8 @@ exports.loginByPhone = async (req, res) => {
         let userInfo;
         if (user) {
             // 更新用户的openid（如果之前没有）
-            if (!user.openld) {
-                user.openld = openid;
+            if (!user.openId) {
+                user.openId = openid;
                 await user.save();
             }
             userInfo = user;
@@ -127,7 +127,7 @@ exports.loginByPhone = async (req, res) => {
             // 创建新用户
             userInfo = await Member.create({
                 userName: `用户_${phoneNumber.substr(-4)}`, // 默认昵称
-                openld: openid,
+                openId: openid,
                 phone: phoneNumber, // 存储手机号
                 avatar: '', // 可以后续让用户设置
             });
@@ -136,7 +136,7 @@ exports.loginByPhone = async (req, res) => {
         // 5. 生成JWT token
         let userPayload = {
             id: userInfo.id,
-            openld: openid,
+            openId: openid,
             phone: phoneNumber,
             userName: userInfo.userName
         };
@@ -211,7 +211,7 @@ exports.getUserInfo = async (req, res) => {
         // 返回用户信息
         let data = await Member.findOne({
             where: {
-                openld: userInfo.openld
+                openId: userInfo.openId
             },
             attributes: {
                 exclude: ['createdAt', 'updatedAt', 'backupField1', 'backupField2', 'backupField3']
@@ -325,7 +325,7 @@ exports.recognizeIdCard = async (req, res) => {
 //         }
 
 //         // ========== 【新增】第 1 步：生成缓存 key ==========
-//         const cacheKey = `user:info:${userInfo.openld}1`;
+//         const cacheKey = `user:info:${userInfo.openId}1`;
 
 //         // ========== 【新增】第 2 步：尝试从 Redis 获取 ==========
 //         let cachedData = await redisService.getFun(cacheKey);
@@ -338,7 +338,7 @@ exports.recognizeIdCard = async (req, res) => {
 //         console.log("是否走数据库查询");
 //         // ========== 第 3 步：缓存未命中，查数据库 ==========
 //         let data = await Member.findOne({
-//             where: { openld: userInfo.openld },
+//             where: { openId: userInfo.openId },
 //             attributes: {
 //                 exclude: ['createdAt', 'updatedAt', 'backupField1', 'backupField2', 'backupField3']
 //             }

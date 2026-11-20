@@ -27,7 +27,7 @@ const Member = sequelize.define('Member', {
         allowNull: true,
     },
     // 用户编号
-    openld: {
+    openId: {
         type: DataTypes.STRING,
         allowNull: false,
     },

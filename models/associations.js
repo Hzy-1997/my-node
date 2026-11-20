@@ -73,8 +73,8 @@ const { ScenicBus } = require('./appointment/scenicBusModel');
 const { ScenicBusOrder } = require('./appointment/scenicBusOrderModel');
 const { ScenicBusOrderTicket } = require('./appointment/scenicBusOrderTicketModel');
 const { Reminder } = require("./reminderModel/index")
-const { Performance } = require('./performance/performance');
-const { PerformanceSchedule } = require('./performance/performanceSchedule');
+const { Performance } = require('./performanceModel/performance');
+const { PerformanceSchedule } = require('./performanceModel/performanceSchedule');
 
 
 
@@ -742,4 +742,6 @@ function setupAssociations() {
     console.log('模型关联关系已建立');
 }
 
-module.exports = { setupAssociations };
+module.exports = {
+    setupAssociations
+};

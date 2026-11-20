@@ -9,14 +9,14 @@ const Performance = sequelize.define('Performance', {
         autoIncrement: true,
         comment: '主键ID'
     },
-    name: {
+    title: {
         type: DataTypes.STRING(50),
         allowNull: false,
         comment: '名称 (必填)'
     },
     subtitle: {
         type: DataTypes.STRING(100),
-        comment: '副标题/卖点'
+        comment: '副标题'
     },
     guide: {
         type: DataTypes.STRING(50),
@@ -27,8 +27,9 @@ const Performance = sequelize.define('Performance', {
         comment: '适合人群'
     },
     performanceTypes: {
-        type: DataTypes.JSON,
-        comment: '演出类型'
+        type: DataTypes.INTEGER,
+        defaultValue: 1,
+        comment: '演出类型 1:常规演出 2:互动演出 3:特别演出',
     },
     tags: {
         type: DataTypes.JSON,

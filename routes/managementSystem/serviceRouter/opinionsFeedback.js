@@ -8,20 +8,20 @@ const { opinionsFeedback, Member } = require("../../../models/Summary")
 // 用户意见反馈操作
 exports.feedbackOperation = async (req, res) => {
     try {
-        let { openld, userPhone, action } = req.body
+        let { openId, userPhone, action } = req.body
 
         if (!action) return res.json(util.fail("操作类型不能为空"))
 
         if (action == "create") {
             // 用户提交反馈需要校验用户信息（管理端更新/删除无需传）
-            if (!openld || !userPhone) return res.json(util.fail("用户ID、手机号或操作不能为空"))
+            if (!openId || !userPhone) return res.json(util.fail("用户ID、手机号或操作不能为空"))
 
             userPhone = util.decrypt(userPhone)
 
             // 检查用户是否存在
             let user = await Member.findOne({
                 where: {
-                    openld: openld
+                    openId: openId
                 }
             })
             if (!user) return res.json(util.fail("用户不存在，请先注册"))
@@ -29,7 +29,7 @@ exports.feedbackOperation = async (req, res) => {
 
             let feedback = await opinionsFeedback.create({
                 ...req.body,
-                openld,
+                openId,
                 userPhone
             })
             if (!feedback) return res.json(util.fail("提交失败"))
@@ -58,10 +58,10 @@ exports.feedbackOperation = async (req, res) => {
 // 获取用户意见反馈列表
 exports.getFeedbackList = async (req, res) => {
     try {
-        let { openld, type, isHandle, content, page = 1, pageSize = 10 } = req.query
+        let { openId, type, isHandle, content, page = 1, pageSize = 10 } = req.query
 
         let where = {}
-        if (openld) where.openld = openld
+        if (openId) where.openId = openId
         if (type) where.type = parseInt(type)
         if (isHandle) where.isHandle = parseInt(isHandle)
         if (content) where.content = { [Op.like]: `%${content}%` }

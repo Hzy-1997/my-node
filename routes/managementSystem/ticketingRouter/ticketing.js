@@ -14,7 +14,7 @@ const { Ticket, Seat, PriceRule, holiday, WriteOff } = require("../../../models/
 // 票务操作
 exports.ticketOperate = async (req, res) => {
     try {
-        let { id, action, title } = req.body;
+        let {  action, title, id } = req.body;
         if (!action) return res.json(util.fail("操作类型不能为空"));
         if (action == "create") {
             let findResponse = await Ticket.findOne({ where: { title } }); // 查找是否存在该票种
@@ -230,7 +230,7 @@ exports.getTicketDatePrices = async (req, res) => {
                     as: 'priceRules',
                     attributes: ['id', 'startDate', 'endDate', 'ruleConfig', 'stock', 'status'],
                     where: { status: 1 },
-                    required: false
+                    required: false 
                 }
             ]
         });
