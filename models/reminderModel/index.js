@@ -43,6 +43,14 @@ const Reminder = sequelize.define('reminder', {
         allowNull: false,
         comment: '提醒时间'
     },
+
+    //提醒提醒时机
+    reminderTimeType: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: '提醒提醒时机'
+    },
+    
     reminderContent: {
         type: DataTypes.STRING,
         allowNull: false,

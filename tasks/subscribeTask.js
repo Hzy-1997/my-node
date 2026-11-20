@@ -10,7 +10,7 @@
 const cron = require("node-cron");
 const { Op } = require("sequelize");
 const axios = require("axios");
-const { Reminder, Member } = require("../models/Summary");
+const { Reminder, Member, Performance } = require("../models/Summary");
 const { getWxAccessToken } = require("../routes/mobileApp/AmethodRouter/index.js");
 const redisService = require("../services/redisService");
 const { APP_ID, WX_REMINDER_TEMPLATE_ID } = require("../config/index");
@@ -31,39 +31,27 @@ function formatWxTime(date) {
 
 async function sendReminder(item) {
 
-    console.log("数据查看", item)
-
-    return; // 测试用，屏蔽发送
-
-    const member = await Member.findOne({
-        where: { id: item.userId },
-        attributes: ["openId", "userName"] // 只查询 openId 字段，避免返回敏感信息
-    })
-
-
-    if (!member || !member.openId) throw new Error("用户 openid 缺失");
-
 
     let payload = {
         template_id: WX_REMINDER_TEMPLATE_ID, // 模板ID
         page: APP_ID, // 页面路径
-        touser: member.openId, // 接收者openid
+        touser: item.member.openId, // 接收者openid
         data: {
             // 键名严格对应你的模板详细内容
             thing1: {
-                value: item.serviceName, // 对应：活动主题（填入你的演出名称，比如《千古情》）
+                value: item.performance.title, // 对应：活动主题（填入你的演出名称，比如《千古情》）
             },
             date2: {
                 value: formatWxTime(item.reminderTime), // 对应：开始时间（必须严格按时间格式，见下方说明）
             },
             thing4: {
-                value: item.serviceAddress, // 对应：活动地点（填入演出地址）
+                value: item.performance.locationDesc, // 对应：活动地点（填入演出地址）
             },
             thing7: {
-                value: '提前10分钟', // 对应：提醒时机（填固定值即可）
+                value: item.reminderTimeType, // 对应：提醒时机（填固定值即可）
             },
             thing9: {
-                value: '演出即将开始', // 对应：备注（温馨提示）
+                value: item.reminderContent, // 对应：备注（温馨提示）
             }
         },
     }
@@ -99,11 +87,17 @@ async function scanAndSendReminders() {
             status: 1,
             reminderTime: { [Op.lte]: now }  // 小于等于当前时间
         },
-        include: [{
-            model: Member,
-            as: 'member',
-            // attributes: ['openId', 'userName'] // 只查询 openId 字段，避免返回敏感信息
-        }],
+        include: [
+            {
+                model: Member,
+                as: 'member',
+                // attributes: ['openId', 'userName'] // 只查询 openId 字段，避免返回敏感信息
+            },
+            {
+                model: Performance,
+                as: 'performance'
+            }
+        ],
         order: [['reminderTime', 'ASC']], // 按提醒时间从早到晚排序，先到期的先处理
         limit: 100, // 限制结果集数量
     })

@@ -719,6 +719,22 @@ function setupAssociations() {
         onUpdate: 'CASCADE' // 当用户信息更新时，关联的提醒也会被更新
     });
 
+        // ==================== Reminder & Performance 关联（演出）====================
+    Reminder.belongsTo(Performance, {
+        foreignKey: 'projectId', // 订阅提醒的演出ID  Reminder表中的performanceId
+        targetKey: 'id', // Performance表中的ID
+        as: 'performance', // 关联的演出模型别名
+        onDelete: 'CASCADE', // 当演出被删除时，关联的提醒也会被删除
+        onUpdate: 'CASCADE' // 当演出信息更新时，关联的提醒也会被更新
+    })
+    Performance.hasMany(Reminder, {
+        foreignKey: 'projectId', // 订阅提醒的演出ID  Performance表中的performanceId
+        sourceKey: 'id', // Reminder表中的ID
+        as: 'reminders', // 关联的提醒模型别名
+        onDelete: 'SET NULL', // 当演出被删除时，关联的提醒也会被删除
+        onUpdate: 'CASCADE' // 当演出信息更新时，关联的提醒也会被更新
+    })
+
 
 
     // ==================== 演艺演出模块关联（Performance / PerformanceSchedule）====================
