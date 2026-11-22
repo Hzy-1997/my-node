@@ -104,7 +104,6 @@ exports.performanceList = async (req, res) => {
         if (status) where.status = parseInt(status); // 状态
         if (performanceTypes) where.performanceTypes = parseInt(performanceTypes); // 演出类型
 
-
         let { rows, count } = await Performance.findAndCountAll({
             where,
             offset: (page - 1) * pageSize,
