@@ -104,12 +104,23 @@ exports.performanceList = async (req, res) => {
         if (status) where.status = parseInt(status); // 状态
         if (performanceTypes) where.performanceTypes = parseInt(performanceTypes); // 演出类型
 
-        let { rows, count } = await Performance.findAndCountAll({
+        const { rows, count } = await Performance.findAndCountAll({
             where,
+            include: [{
+                model: PerformanceSchedule,
+                as: "schedules",
+                required: false,           // LEFT JOIN，保留没有 schedule 的 Performance
+                separate: true,            // 独立查询，彻底避开 JOIN 分页问题
+                order: [["weekDay", "ASC"], ["showTime", "ASC"]],  // 子表按星期+时间排序
+            }],
+            attributes: { exclude: ["createdAt", "updatedAt"] },
             offset: (page - 1) * pageSize,
             limit: pageSize,
-            order: [["sort", "asc"], ["id", "desc"]],
-        })
+            order: [["sort", "ASC"], ["id", "DESC"]],
+            distinct: true,              // count 去重（非 separate 时更必要）
+            subQuery: false,             // ⭐ separate 模式下建议关闭 subQuery
+        });
+        
         return res.json(util.success("获取成功", {
             rows,
             count
