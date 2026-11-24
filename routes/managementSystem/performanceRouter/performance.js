@@ -8,7 +8,7 @@
  */
 const { Op } = require("sequelize");
 const util = require("../../../utils/util");
-const { Performance, PerformanceSchedule } = require("../../../models/Summary");
+const { Performance, PerformanceSchedule, Reminder } = require("../../../models/Summary");
 
 
 
@@ -94,7 +94,7 @@ exports.performance = async (req, res) => {
 // 获取演出节目列表
 exports.performanceList = async (req, res) => {
     try {
-        let { title, status, performanceTypes, page = 1, pageSize = 10 } = req.query;
+        let { title, status, performanceTypes, page = 1, pageSize = 10, userId } = req.query;
 
         page = parseInt(page);
         pageSize = parseInt(pageSize);
@@ -104,6 +104,9 @@ exports.performanceList = async (req, res) => {
         if (status) where.status = parseInt(status); // 状态
         if (performanceTypes) where.performanceTypes = parseInt(performanceTypes); // 演出类型
 
+        // 关联用户预约记录（传 userId 时只查该用户的预约，便于前端判断有没有预约）
+        if (userId) reminderInclude.where = { userId: parseInt(userId) };
+
         const { rows, count } = await Performance.findAndCountAll({
             where,
             include: [{
@@ -112,6 +115,11 @@ exports.performanceList = async (req, res) => {
                 required: false,           // LEFT JOIN，保留没有 schedule 的 Performance
                 separate: true,            // 独立查询，彻底避开 JOIN 分页问题
                 order: [["weekDay", "ASC"], ["showTime", "ASC"]],  // 子表按星期+时间排序
+            }, {
+                model: Reminder,
+                as: "reminders",             // 对应 associations.js 中 Performance.hasMany(Reminder)
+                required: false,              // LEFT JOIN，保留没有预约记录的 Performance
+                separate: true,               // 独立查询，避开 JOIN 分页问题
             }],
             attributes: { exclude: ["createdAt", "updatedAt"] },
             offset: (page - 1) * pageSize,
@@ -120,7 +128,7 @@ exports.performanceList = async (req, res) => {
             distinct: true,              // count 去重（非 separate 时更必要）
             subQuery: false,             // ⭐ separate 模式下建议关闭 subQuery
         });
-        
+
         return res.json(util.success("获取成功", {
             rows,
             count
@@ -131,6 +139,39 @@ exports.performanceList = async (req, res) => {
     }
 }
 
+// 获取演出节目详情
+exports.performanceDetail = async (req, res) => {
+    try {
+        const { id, userId } = req.query;
+        if (!id) return res.json(util.fail("缺少必要参数"));
+
+        // 关联用户预约记录（传 userId 时只查该用户的预约，便于前端判断有没有预约）
+        if (userId) reminderInclude.where = { userId: parseInt(userId) };
+
+        let data = await Performance.findByPk(id, {
+            include: [{
+                model: PerformanceSchedule,
+                as: "schedules",
+                required: false,           // LEFT JOIN，保留没有 schedule 的 Performance
+                separate: true,            // 独立查询，彻底避开 JOIN 分页问题
+                order: [["weekDay", "ASC"], ["showTime", "ASC"]],  // 子表按星期+时间排序
+            }, {
+                model: Reminder,
+                as: "reminders",             // 对应 associations.js 中 Performance.hasMany(Reminder)
+                required: false,              // LEFT JOIN，保留没有预约记录的 Performance
+                separate: true,               // 独立查询，避开 JOIN 分页问题
+            }],
+            attributes: { exclude: ["createdAt", "updatedAt"] },
+            order: [["sort", "ASC"], ["id", "DESC"]],
+            distinct: true,              // count 去重（非 separate 时更必要）
+            subQuery: false,             // ⭐ separate 模式下建议关闭 subQuery
+        });
+        if (!data) return res.json(util.fail("演出节目不存在"));
+        return res.json(util.success("获取成功", data));
+    } catch (error) {
+        return res.json(util.fail("系统出错", error.message));
+    }
+}
 
 // 演出场次操作（创建/批量创建/更新/删除/清空某天）
 exports.performanceSchedule = async (req, res) => {

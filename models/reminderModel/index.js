@@ -27,6 +27,13 @@ const Reminder = sequelize.define('reminder', {
         allowNull: false,
         comment: '项目ID'
     },
+    // 是否预约
+    isAppointment: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        defaultValue: 1,
+        comment: '是否预约 1-否,2-是'
+    },
     // 项目开始时间 冗余存一份
     projectStartTime: {
         type: DataTypes.DATE,
@@ -50,7 +57,7 @@ const Reminder = sequelize.define('reminder', {
         allowNull: false,
         comment: '提醒提醒时机'
     },
-    
+
     reminderContent: {
         type: DataTypes.STRING,
         allowNull: false,
