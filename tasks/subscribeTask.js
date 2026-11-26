@@ -24,6 +24,11 @@ function formatWxTime(date) {
     return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// thing 类型字段最多 20 个字符，超长会被微信以 47003 拒绝
+function clampThing(value) {
+    return String(value || "").trim().slice(0, 20);
+}
+
 /**
  * 发送渠道入口 —— 渠道分派收敛于此，二期站内信/三期短信在此追加分支
  * 抛出异常 → 主流程置 status=3（43101 未授权等错误同样走此路径，不重试）
@@ -34,24 +39,24 @@ async function sendReminder(item) {
 
     let payload = {
         template_id: WX_REMINDER_TEMPLATE_ID, // 模板ID
-        page: APP_ID, // 页面路径
+        // page: APP_ID, // 页面路径
         touser: item.member.openId, // 接收者openid
         data: {
             // 键名严格对应你的模板详细内容
             thing1: {
-                value: item.performance.title, // 对应：活动主题（填入你的演出名称，比如《千古情》）
+                value: clampThing(item.performance.title), // 对应：活动主题（填入你的演出名称，比如《千古情》）
             },
             date2: {
                 value: formatWxTime(item.reminderTime), // 对应：开始时间（必须严格按时间格式，见下方说明）
             },
             thing4: {
-                value: item.performance.locationDesc, // 对应：活动地点（填入演出地址）
+                value: clampThing(item.performance.locationDesc), // 对应：活动地点（填入演出地址）
             },
             thing7: {
-                value: item.reminderTimeType, // 对应：提醒时机（填固定值即可）
+                value: clampThing(item.reminderTimeType), // 对应：提醒时机（填固定值即可）
             },
             thing9: {
-                value: item.reminderContent, // 对应：备注（温馨提示）
+                value: clampThing(item.reminderContent), // 对应：备注（温馨提示）
             }
         },
     }
@@ -64,6 +69,7 @@ async function sendReminder(item) {
         );
 
     let { data } = await send(await getWxAccessToken());
+
 
     // access_token 失效（40001/42001）：清缓存重取，重发一次
     if (data.errcode === 40001 || data.errcode === 42001) {
