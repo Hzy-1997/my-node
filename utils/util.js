@@ -24,6 +24,9 @@ const CODE = {
 }
 
 
+// ISO UTC 日期串（Date.toJSON() 的输出格式），用于识别需要转本地时间的字段
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+
 /**
  * 格式化日期数据
  * @param {Array} dateStr - 包含日期数据的数组，可以是普通对象或Sequelize模型实例
@@ -50,6 +53,16 @@ function formDate(dateStr) {
             }
         });
 
+        // 业务日期字段（reminderTime、projectStartTime 等）：ISO UTC 串 → 本地时间字符串
+        // Sequelize + res.json 会把 DATE 字段序列化成 "2026-11-26T02:30:00.000Z"（UTC 表示），
+        // 前端直接取 'T' 后面的小时会差 8 小时，这里统一转成 "YYYY-MM-DD HH:mm:ss"（北京时间）
+        Object.keys(plain).forEach((key) => {
+            const v = plain[key];
+            if (v instanceof Date || (typeof v === 'string' && ISO_DATE.test(v))) {
+                plain[key] = formatTime(v);
+            }
+        });
+
         // 对象自身的 createdAt 等时间字段也要格式化
         plain.createdAt = plain.createdAt ? formatTime(plain.createdAt) : plain.createdAt ?? null;
         plain.updatedAt = plain.updatedAt ? formatTime(plain.updatedAt) : plain.updatedAt ?? null;
@@ -71,6 +84,14 @@ function formDate(dateStr) {
             Object.keys(plainItem).forEach((key) => {
                 if (Array.isArray(plainItem[key])) {
                     plainItem[key] = formDate(plainItem[key]);
+                }
+            });
+
+            // 业务日期字段：ISO UTC 串 / Date 对象 → 本地时间字符串（同上）
+            Object.keys(plainItem).forEach((key) => {
+                const v = plainItem[key];
+                if (v instanceof Date || (typeof v === 'string' && ISO_DATE.test(v))) {
+                    plainItem[key] = formatTime(v);
                 }
             });
 

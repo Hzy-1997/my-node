@@ -7,8 +7,10 @@
  * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
  */
 const { Op } = require("sequelize");
-const util = require("../../../utils/util");
-const { Performance, PerformanceSchedule, Reminder } = require("../../../models/Summary");
+const jwt = require("jsonwebtoken");
+const { secretJwt } = require("../../../config/index.js");
+const util = require("../../../utils/util.js");
+const { Performance, PerformanceSchedule, Reminder } = require("../../../models/Summary.js");
 
 
 
@@ -94,7 +96,7 @@ exports.performance = async (req, res) => {
 // 获取演出节目列表
 exports.performanceList = async (req, res) => {
     try {
-        let { title, status, performanceTypes, page = 1, pageSize = 10, userId } = req.query;
+        let { title, status, performanceTypes, page = 1, pageSize = 10, } = req.query;
 
         page = parseInt(page);
         pageSize = parseInt(pageSize);
@@ -104,9 +106,6 @@ exports.performanceList = async (req, res) => {
         if (status) where.status = parseInt(status); // 状态
         if (performanceTypes) where.performanceTypes = parseInt(performanceTypes); // 演出类型
 
-        // 关联用户预约记录（传 userId 时只查该用户的预约，便于前端判断有没有预约）
-        if (userId) reminderInclude.where = { userId: parseInt(userId) };
-
         const { rows, count } = await Performance.findAndCountAll({
             where,
             include: [{
@@ -115,11 +114,6 @@ exports.performanceList = async (req, res) => {
                 required: false,           // LEFT JOIN，保留没有 schedule 的 Performance
                 separate: true,            // 独立查询，彻底避开 JOIN 分页问题
                 order: [["weekDay", "ASC"], ["showTime", "ASC"]],  // 子表按星期+时间排序
-            }, {
-                model: Reminder,
-                as: "reminders",             // 对应 associations.js 中 Performance.hasMany(Reminder)
-                required: false,              // LEFT JOIN，保留没有预约记录的 Performance
-                separate: true,               // 独立查询，避开 JOIN 分页问题
             }],
             attributes: { exclude: ["createdAt", "updatedAt"] },
             offset: (page - 1) * pageSize,
@@ -145,8 +139,25 @@ exports.performanceDetail = async (req, res) => {
         const { id, userId } = req.query;
         if (!id) return res.json(util.fail("缺少必要参数"));
 
-        // 关联用户预约记录（传 userId 时只查该用户的预约，便于前端判断有没有预约）
-        if (userId) reminderInclude.where = { userId: parseInt(userId) };
+        if (!req.headers.authorization) {
+            return res.json(util.fail("未登录，请先登录"));
+        }
+
+        let token = req.headers.authorization.replace("Bearer ", "");
+        if (!token) {
+            return res.json(util.fail("登录信息无效，请重新登录"));
+        }
+
+        // 捕获 jwt 的验证错误，判断是否是过期的 token
+        let userInfo;
+        try {
+            userInfo = jwt.verify(token, secretJwt.secret);
+        } catch (error) {
+            return res.json(util.fail("无效的登录信息，请重新登录"));
+        }
+
+        // // 关联用户预约记录（传 userId 时只查该用户的预约，便于前端判断有没有预约）
+        // if (userId) reminderInclude.where = { userId: parseInt(userId) };
 
         let data = await Performance.findByPk(id, {
             include: [{
@@ -160,6 +171,7 @@ exports.performanceDetail = async (req, res) => {
                 as: "reminders",             // 对应 associations.js 中 Performance.hasMany(Reminder)
                 required: false,              // LEFT JOIN，保留没有预约记录的 Performance
                 separate: true,               // 独立查询，避开 JOIN 分页问题
+                where: { userId: userInfo.id },  // 只查当前登录用户的预约记录
             }],
             attributes: { exclude: ["createdAt", "updatedAt"] },
             order: [["sort", "ASC"], ["id", "DESC"]],

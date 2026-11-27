@@ -73,8 +73,8 @@ const { ScenicBus } = require('./appointment/scenicBusModel');
 const { ScenicBusOrder } = require('./appointment/scenicBusOrderModel');
 const { ScenicBusOrderTicket } = require('./appointment/scenicBusOrderTicketModel');
 const { Reminder } = require("./reminderModel/index")
-const { Performance } = require('./performanceModel/performance');
-const { PerformanceSchedule } = require('./performanceModel/performanceSchedule');
+const { Performance } = require('./scenicSpotsModel/performance');
+const { PerformanceSchedule } = require('./scenicSpotsModel/performanceSchedule');
 
 
 
@@ -719,7 +719,7 @@ function setupAssociations() {
         onUpdate: 'CASCADE' // 当用户信息更新时，关联的提醒也会被更新
     });
 
-        // ==================== Reminder & Performance 关联（演出）====================
+    // ==================== Reminder & Performance 关联（演出）====================
     Reminder.belongsTo(Performance, {
         foreignKey: 'projectId', // 订阅提醒的演出ID  Reminder表中的performanceId
         targetKey: 'id', // Performance表中的ID

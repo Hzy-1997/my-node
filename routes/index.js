@@ -1,4 +1,12 @@
 /*
+ * @描述: 
+ * @版本: 
+ * @作者: 
+ * @日期: ${year}-${month}-${day}
+ * @最后编辑者: sueRimn
+ * @最后编辑时间: ${year}-${month}-${day} ${hour}:${minute}:${second}
+ */
+/*
  * @Descripttion: 
  * @version: 
  * @Author: sueRimn
@@ -37,11 +45,6 @@ router.use("/appointment", require("./managementSystem/appointmentRouter/index.j
 router.use("/serviceSuggestions", require("./managementSystem/serviceRouter/index.js"))
 
 
-
-
-
-
-
 // 支付宝支付（秒杀抢票相关）
 router.use("/alipay", require("./managementSystem/payment/index.js"))
 // 公共接口（支付/回调/退款，所有业务共用）
@@ -53,7 +56,7 @@ router.use("/dict", checkToken, require("./managementSystem/dictTypeRouter/index
 // 联系电话管理
 router.use("/contactPhone", require("./managementSystem/contactPhoneRouter/index.js"))
 // 演出管理
-router.use("/performance", require("./managementSystem/performanceRouter/index.js"))
+router.use("/performance", require("./managementSystem/scenicSpotsRouter/index.js"))
 
 
 

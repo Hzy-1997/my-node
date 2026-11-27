@@ -91,8 +91,10 @@ const { Reminder } = require("./reminderModel/index")
 const { contactPhone } = require("./contactPhoneModel/contactPhone")
 
 // 演出表
-const { Performance } = require("./performanceModel/performance")
-const { PerformanceSchedule } = require("./performanceModel/performanceSchedule")
+const { Performance } = require("./scenicSpotsModel/performance")
+const { PerformanceSchedule } = require("./scenicSpotsModel/performanceSchedule")
+const { Banner } = require("./scenicSpotsModel/banner")
+const { Popup } = require("./scenicSpotsModel/popup")
 
 
 
@@ -122,5 +124,5 @@ module.exports = {
     QuestionsAnswers,
     Reminder,
     contactPhone,
-    Performance, PerformanceSchedule,
+    Performance, PerformanceSchedule, Banner, Popup,
 };

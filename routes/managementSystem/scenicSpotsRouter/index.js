@@ -10,6 +10,8 @@ const express = require('express');
 const router = express.Router()
 
 const performance = require("./performance")
+const banner = require("./banner")
+const popup = require("./popup")
 
 
 // 演出操作（创建/更新/删除）
@@ -22,6 +24,15 @@ router.get("/performanceDetail", performance.performanceDetail)
 router.post("/performanceScheduleOperation", performance.performanceSchedule)
 // 演出场次列表
 router.get("/performanceScheduleList", performance.performanceScheduleList)
+
+// 轮播图操作（创建/更新/删除）
+router.post("/bannerOperation", banner.banner)
+// 轮播图列表
+router.get("/bannerList", banner.bannerList)
+// 弹窗操作（创建/更新/删除）
+router.post("/popupOperation", popup.popup)
+// 弹窗列表
+router.get("/popupList", popup.popupList)
 
 
 module.exports = router

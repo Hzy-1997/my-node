@@ -39,7 +39,7 @@ async function sendReminder(item) {
 
     let payload = {
         template_id: WX_REMINDER_TEMPLATE_ID, // 模板ID
-        // page: APP_ID, // 页面路径
+        page: `subpackages/performanceDetails/performanceDetails?id=${item.performance.id}`, // 页面路径
         touser: item.member.openId, // 接收者openid
         data: {
             // 键名严格对应你的模板详细内容
@@ -47,13 +47,13 @@ async function sendReminder(item) {
                 value: clampThing(item.performance.title), // 对应：活动主题（填入你的演出名称，比如《千古情》）
             },
             date2: {
-                value: formatWxTime(item.reminderTime), // 对应：开始时间（必须严格按时间格式，见下方说明）
+                value: formatWxTime(item.projectStartTime), // 对应：开始时间（必须严格按时间格式，见下方说明）
             },
             thing4: {
                 value: clampThing(item.performance.locationDesc), // 对应：活动地点（填入演出地址）
             },
             thing7: {
-                value: clampThing(item.reminderTimeType), // 对应：提醒时机（填固定值即可）
+                value: `提前${clampThing(item.reminderTimeType)}分钟`, // 对应：提醒时机（填固定值即可）
             },
             thing9: {
                 value: clampThing(item.reminderContent), // 对应：备注（温馨提示）
