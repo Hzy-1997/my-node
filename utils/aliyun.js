@@ -17,6 +17,8 @@ const config = {
 // 合法分类白名单，防止路径穿越
 const ALLOWED_CATEGORIES = [
     'avatar', // 用户头像
+    'banner', // 轮播图
+    'popup', // 弹窗图片
     'ticket', // 票务图片
     'performance', // 演出图片
     'hotel', // 酒店图片
